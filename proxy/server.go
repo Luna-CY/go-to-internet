@@ -1,8 +1,10 @@
 package proxy
 
 import (
+    "encoding/json"
     "fmt"
-    "io/ioutil"
+    "gitee.com/Luna-CY/go-to-internet/common"
+    "io"
     "net/http"
     "net/url"
 )
@@ -13,25 +15,36 @@ type Server struct{}
 // ServeHTTP http请求处理器
 func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
     fmt.Printf("req from %v to %v\n", request.RemoteAddr, request.URL)
-    response, err := s.get(request.URL, &request.Header)
-    if nil != err {
-        writer.WriteHeader(500)
 
-        _, _ = fmt.Fprintln(writer, "hello word")
+    fmt.Printf("URL: %v\n", request.URL)
+    fmt.Printf("METHOD: %v\n", request.Method)
+
+    var db []byte
+    data := make([]byte, 256)
+
+    for {
+        n, err := request.Body.Read(data)
+        db = append(db, data[:n]...)
+
+        if io.EOF == err {
+            break
+        }
+    }
+
+    httpRequest := common.HttpRequest{}
+    err := json.Unmarshal(db, &httpRequest)
+    if nil != err {
+        writer.WriteHeader(400)
 
         return
     }
-    defer response.Body.Close()
 
-    for name, value := range response.Header {
-        writer.Header().Add(name, value[0])
-    }
+    fmt.Printf("TARGET IP: %v\n", httpRequest.TargetIp)
+    fmt.Printf("TARGET PORT: %d\n", httpRequest.TargetPort)
+    fmt.Printf("DATA: %v\n", httpRequest.Data)
 
-    data, _ := ioutil.ReadAll(response.Body)
-    writer.WriteHeader(response.StatusCode)
-
-    fmt.Printf("res to %v\n", request.RemoteAddr)
-    _, _ = fmt.Fprintf(writer, "%v", string(data))
+    writer.WriteHeader(200)
+    _, _ = fmt.Fprintf(writer, "请求成功")
 }
 
 // get http get方法代理

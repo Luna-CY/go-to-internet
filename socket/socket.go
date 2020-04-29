@@ -40,7 +40,7 @@ func (c *Socket) Start() {
     }
 }
 
-// connection 处理连接请求
+// connection 处理socket连接请求
 func (c *Socket) connection(conn net.Conn) {
     defer conn.Close()
 
@@ -54,7 +54,7 @@ func (c *Socket) connection(conn net.Conn) {
         return
     }
 
-    _, _, err := c.getRemoteAddr(conn)
+    ip, port, err := c.getRemoteAddr(conn)
     if nil != err {
         _, _ = conn.Write([]byte{0x05, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
@@ -81,13 +81,11 @@ func (c *Socket) connection(conn net.Conn) {
         index++
     }
 
-    fmt.Println(ack)
     _, _ = conn.Write(ack)
 
-    data := make([]byte, 1024)
-    _, _ = conn.Read(data)
-
-    fmt.Println(data)
+    // 处理http请求
+    http := HTTP{Sock: c, Conn: &conn, TargetIp: ip, TargetPort: port}
+    http.request()
 }
 
 // isSocks5 检查连接是否是socks5协议
