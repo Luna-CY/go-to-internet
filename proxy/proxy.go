@@ -2,6 +2,7 @@ package proxy
 
 import (
     "fmt"
+    "io/ioutil"
     "net/http"
     "net/url"
 )
@@ -10,6 +11,7 @@ type Proxy struct{}
 
 // ServeHTTP http请求处理器
 func (p *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+    fmt.Printf("req from %v to %v\n", request.RemoteAddr, request.URL)
     response, err := p.get(request.URL, &request.Header)
     if nil != err {
         writer.WriteHeader(500)
@@ -24,9 +26,11 @@ func (p *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
         writer.Header().Add(name, value[0])
     }
 
+    data, _ := ioutil.ReadAll(response.Body)
     writer.WriteHeader(response.StatusCode)
 
-    _, _ = fmt.Fprintln(writer, "hi")
+    fmt.Printf("res to %v\n", request.RemoteAddr)
+    _, _ = fmt.Fprintf(writer, "%v", string(data))
 }
 
 // get http get方法代理
