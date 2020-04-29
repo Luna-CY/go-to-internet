@@ -18,8 +18,9 @@ func main() {
     socket := proxy.Socket{}
 
     flag.StringVar(&socket.Hostname, "H", "", "服务器域名")
-    flag.StringVar(&socket.IpAddr, "l", "127.0.0.1", "本地监听地址")
-    flag.IntVar(&socket.Port, "p", 1280, "本地监听端口")
+    flag.IntVar(&socket.Port, "p", 443, "服务器端口")
+    flag.StringVar(&socket.LocalAddr, "l", "127.0.0.1", "本地监听地址")
+    flag.IntVar(&socket.LocalPort, "lp", 1280, "本地监听端口")
 
     flag.BoolVar(&socket.Authorize, "auth", false, "服务端是否需要身份认证")
     flag.StringVar(&socket.Username, "u", "", "服务端身份认证用户名")

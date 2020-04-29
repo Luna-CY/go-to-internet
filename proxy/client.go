@@ -1,6 +1,7 @@
 package proxy
 
 import (
+    "encoding/binary"
     "errors"
     "fmt"
     "log"
@@ -9,9 +10,10 @@ import (
 
 // Socket 结构体
 type Socket struct {
-    Hostname string // 服务器域名
-    IpAddr   string // 本地监听的端口
-    Port     int    // 服务器端口
+    Hostname  string // 服务器域名
+    Port      int    // 服务器端口
+    LocalAddr string // 本地监听地址
+    LocalPort int    // 本地监听端口
 
     Authorize bool   // 是否需要身份认证
     Username  string // 身份认证用户名
@@ -20,11 +22,11 @@ type Socket struct {
 
 // Start 启动本地服务监听
 func (c *Socket) Start() {
-    fmt.Printf("启动监听 %v:%d ...\n", c.IpAddr, c.Port)
+    fmt.Printf("启动监听 %v:%d ...\n", c.LocalAddr, c.LocalPort)
 
-    listen, err := net.Listen("tcp", fmt.Sprintf("%v:%d", c.IpAddr, c.Port))
+    listen, err := net.Listen("tcp", fmt.Sprintf("%v:%d", c.LocalAddr, c.LocalPort))
     if nil != err {
-        log.Fatal(fmt.Sprintf("监听地址 %v:%d 失败", c.IpAddr, c.Port))
+        log.Fatal(fmt.Sprintf("监听地址 %v:%d 失败", c.LocalAddr, c.LocalPort))
     }
     defer listen.Close()
 
@@ -40,26 +42,59 @@ func (c *Socket) Start() {
 
 // request 处理连接请求
 func (c *Socket) request(conn net.Conn) {
+    data := c.getHttpRequest(conn)
+
+    fmt.Println(data)
+}
+
+// getHttpRequest 解析socks协议并获取http请求数据
+func (c *Socket) getHttpRequest(conn net.Conn) []byte {
     defer conn.Close()
 
     if !c.isSocks5(conn) || !c.authorize(conn) {
-        return
+        return nil
     }
 
     if !c.isConnectCmd(conn) {
         _, _ = conn.Write([]byte{0x05, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
-        return
+        return nil
     }
 
-    ip, port, err := c.getRemoteAddr(conn)
+    _, _, err := c.getRemoteAddr(conn)
     if nil != err {
         _, _ = conn.Write([]byte{0x05, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
-        return
+        return nil
     }
 
-    fmt.Printf("%v:%d", ip, port)
+    ack := make([]byte, 4+1+len(c.Hostname)+2)
+    ack[0] = 0x05 // VER
+    ack[1] = 0x00 // REP
+    ack[2] = 0x00 // RSV
+    ack[3] = 0x03 // ATYP: 域名
+    ack[4] = byte(len(c.Hostname))
+
+    index := 5
+    for _, d := range []byte(c.Hostname) {
+        ack[index] = d
+        index++
+    }
+
+    bs := make([]byte, 2)
+    binary.BigEndian.PutUint16(bs, uint16(c.Port))
+    for _, d := range bs {
+        ack[index] = d
+        index++
+    }
+
+    fmt.Println(ack)
+    _, _ = conn.Write(ack)
+
+    data := make([]byte, 1024)
+    _, _ = conn.Read(data)
+
+    return data
 }
 
 // isSocks5 检查连接是否是socks5协议
