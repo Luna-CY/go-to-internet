@@ -11,15 +11,15 @@ import (
     "os"
 )
 
-// Usage 打印控制台Usage信息
-func Usage() {
+// serverCommandUsage 打印控制台Usage信息
+func serverCommandUsage() {
     _, _ = fmt.Fprintln(flag.CommandLine.Output(), "server -H Hostname -c CRT -k KEY [options]")
 
     flag.PrintDefaults()
 }
 
 func main() {
-    c := &config.Config{}
+    c := &config.Server{}
 
     flag.StringVar(&c.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
     flag.IntVar(&c.Port, "p", 443, "监听端口号")
@@ -28,7 +28,8 @@ func main() {
     flag.StringVar(&c.SSLKeyFile, "k", "", "SSL KEY文件路径")
 
     flag.BoolVar(&c.Authorize, "auth", false, "是否开启用户身份验证，默认不启用")
-    flag.Usage = Usage
+
+    flag.Usage = serverCommandUsage
     flag.Parse()
 
     if "" == c.Hostname || "" == c.SSLCrtFile || "" == c.SSLKeyFile {
@@ -38,7 +39,7 @@ func main() {
     }
 
     server := &http.Server{Addr: fmt.Sprintf(":%d", c.Port)}
-    server.Handler = &proxy.Proxy{}
+    server.Handler = &proxy.Server{}
 
     if err := http2.ConfigureServer(server, &http2.Server{}); nil != err {
         log.Fatal("配置http/2服务器失败")

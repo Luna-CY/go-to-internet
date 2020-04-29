@@ -1,7 +1,7 @@
 package config
 
-// Config 配置对象
-type Config struct {
+// Server 配置对象
+type Server struct {
     Hostname string // 证书域名
     Port     int    // 监听端口号
 

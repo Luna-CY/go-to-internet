@@ -7,12 +7,13 @@ import (
     "net/url"
 )
 
-type Proxy struct{}
+// Server 结构体
+type Server struct{}
 
 // ServeHTTP http请求处理器
-func (p *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
     fmt.Printf("req from %v to %v\n", request.RemoteAddr, request.URL)
-    response, err := p.get(request.URL, &request.Header)
+    response, err := s.get(request.URL, &request.Header)
     if nil != err {
         writer.WriteHeader(500)
 
@@ -34,7 +35,7 @@ func (p *Proxy) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 }
 
 // get http get方法代理
-func (p *Proxy) get(url *url.URL, header *http.Header) (*http.Response, error) {
+func (s *Server) get(url *url.URL, header *http.Header) (*http.Response, error) {
     request, err := http.NewRequest("GET", url.String(), nil)
     if nil != err {
         return nil, err
