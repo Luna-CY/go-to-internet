@@ -1,4 +1,4 @@
-package proxy
+package socket
 
 import (
     "encoding/binary"
@@ -36,36 +36,29 @@ func (c *Socket) Start() {
             log.Fatal("接收请求失败")
         }
 
-        go c.request(conn)
+        go c.connection(conn)
     }
 }
 
-// request 处理连接请求
-func (c *Socket) request(conn net.Conn) {
-    data := c.getHttpRequest(conn)
-
-    fmt.Println(data)
-}
-
-// getHttpRequest 解析socks协议并获取http请求数据
-func (c *Socket) getHttpRequest(conn net.Conn) []byte {
+// connection 处理连接请求
+func (c *Socket) connection(conn net.Conn) {
     defer conn.Close()
 
     if !c.isSocks5(conn) || !c.authorize(conn) {
-        return nil
+        return
     }
 
     if !c.isConnectCmd(conn) {
         _, _ = conn.Write([]byte{0x05, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
-        return nil
+        return
     }
 
     _, _, err := c.getRemoteAddr(conn)
     if nil != err {
         _, _ = conn.Write([]byte{0x05, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
-        return nil
+        return
     }
 
     ack := make([]byte, 4+1+len(c.Hostname)+2)
@@ -94,7 +87,7 @@ func (c *Socket) getHttpRequest(conn net.Conn) []byte {
     data := make([]byte, 1024)
     _, _ = conn.Read(data)
 
-    return data
+    fmt.Println(data)
 }
 
 // isSocks5 检查连接是否是socks5协议
