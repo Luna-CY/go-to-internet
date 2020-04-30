@@ -55,7 +55,7 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
         isLast := false
         resData, _ := common.ReadAll(tcp)
 
-        if "0\r\n\r\n" == string(resData[len(resData)-5:]) {
+        if "\r\n\r\n" == string(resData[len(resData)-4:]) {
             isLast = true
         }
 
