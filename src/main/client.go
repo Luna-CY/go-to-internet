@@ -3,7 +3,7 @@ package main
 import (
     "flag"
     "fmt"
-    "gitee.com/Luna-CY/go-to-internet/socket"
+    "gitee.com/Luna-CY/go-to-internet/src/socket"
     "os"
 )
 

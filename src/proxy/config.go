@@ -1,7 +1,7 @@
-package config
+package proxy
 
-// Server 配置对象
-type Server struct {
+// ServerConfig 配置对象
+type ServerConfig struct {
     Hostname string // 证书域名
     Port     int    // 监听端口号
 

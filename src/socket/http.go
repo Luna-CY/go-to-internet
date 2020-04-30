@@ -5,9 +5,8 @@ import (
     "crypto/tls"
     "encoding/json"
     "fmt"
-    "gitee.com/Luna-CY/go-to-internet/common"
+    "gitee.com/Luna-CY/go-to-internet/src/common"
     "golang.org/x/net/http2"
-    "io"
     "net"
     "net/http"
 )
@@ -24,31 +23,16 @@ type HTTP struct {
 // request 处理http请求
 func (h *HTTP) request() {
     // 创建http/2客户端
-    client := http.Client{
-        Transport: &http2.Transport{
-            AllowHTTP: true,
-            DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
-                return net.Dial(network, addr)
-            },
-            TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-        },
+    transport := &http.Transport{
+        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
     }
+    _ = http2.ConfigureTransport(transport)
 
-    var db []byte
-    data := make([]byte, 256)
+    client := http.Client{Transport: transport}
 
-    for {
-        n, err := (*h.Conn).Read(data)
-        db = append(db, data[:n]...)
-
-        if io.EOF == err || n < len(data) {
-            break
-        }
-    }
-
-    request := common.HttpRequest{TargetIp: h.TargetIp, TargetPort: h.TargetPort, Data: db}
+    reqData, _ := common.ReadAll(*h.Conn)
+    request := common.HttpRequest{TargetIp: h.TargetIp, TargetPort: h.TargetPort, Data: reqData}
     body, _ := json.Marshal(request)
-    fmt.Println(string(body))
 
     fmt.Printf("request to https://%v:%d\n", h.Sock.Hostname, h.Sock.Port)
     req, _ := http.NewRequest("POST", fmt.Sprintf("https://%v:%d", h.Sock.Hostname, h.Sock.Port), bytes.NewBuffer(body))
@@ -60,5 +44,15 @@ func (h *HTTP) request() {
         return
     }
 
-    fmt.Println(res.StatusCode)
+    httpResponse := common.HttpResponse{}
+    resData, _ := common.ReadAll(res.Body)
+    _ = json.Unmarshal(resData, &httpResponse)
+
+    if common.Success != httpResponse.Code {
+        fmt.Println(httpResponse.Message)
+
+        return
+    }
+
+    _, _ = (*h.Conn).Write(httpResponse.Data)
 }

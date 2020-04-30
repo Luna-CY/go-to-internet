@@ -3,8 +3,7 @@ package main
 import (
     "flag"
     "fmt"
-    "gitee.com/Luna-CY/go-to-internet/config"
-    "gitee.com/Luna-CY/go-to-internet/proxy"
+    "gitee.com/Luna-CY/go-to-internet/src/proxy"
     "golang.org/x/net/http2"
     "log"
     "net/http"
@@ -19,7 +18,7 @@ func serverCommandUsage() {
 }
 
 func main() {
-    c := &config.Server{}
+    c := &proxy.ServerConfig{}
 
     flag.StringVar(&c.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
     flag.IntVar(&c.Port, "p", 443, "监听端口号")
