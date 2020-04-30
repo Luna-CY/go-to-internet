@@ -1,6 +1,9 @@
 package common
 
-import "io"
+import (
+    "fmt"
+    "io"
+)
 
 // ReadAll 替代ioutil.ReadAll方法
 func ReadAll(reader io.Reader) ([]byte, error) {
@@ -12,6 +15,8 @@ func ReadAll(reader io.Reader) ([]byte, error) {
         data = append(data, buffer[:n]...)
 
         if nil != err && io.EOF != err {
+            fmt.Println(err)
+
             return nil, err
         }
 

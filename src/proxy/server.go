@@ -25,40 +25,54 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
     httpRequest := common.HttpRequest{}
 
     reqData, _ := common.ReadAll(request.Body)
+    request.Body.Close()
+
     err := json.Unmarshal(reqData, &httpRequest)
     if nil != err {
-        s.send(common.UnSerializeDataFail, "解析请求数据失败", nil)
+        s.send(common.UnSerializeDataFail, "解析请求数据失败", nil, true)
 
         return
     }
 
     fmt.Printf("%v 请求 %v:%d\n", request.RemoteAddr, httpRequest.TargetIp, httpRequest.TargetPort)
 
-    tcp, err := net.Dial(httpRequest.TargetIp, string(httpRequest.TargetPort))
+    tcp, err := net.Dial("tcp", fmt.Sprintf("%v:%d", httpRequest.TargetIp, httpRequest.TargetPort))
     if nil != err {
         fmt.Printf("连接目标服务器失败 %v:%d\n", httpRequest.TargetIp, httpRequest.TargetPort)
-        s.send(common.ConnectToTargetFail, "代理失败: 无法连接目标服务器", nil)
+        s.send(common.ConnectToTargetFail, "代理失败: 无法连接目标服务器", nil, true)
 
         return
     }
+    defer tcp.Close()
 
     if _, err = tcp.Write(httpRequest.Data); nil != err {
-        s.send(common.WriteDataToTargetFail, "代理失败: 向目标服务器发送数据失败", nil)
+        s.send(common.WriteDataToTargetFail, "代理失败: 向目标服务器发送数据失败", nil, true)
 
         return
     }
 
-    resData, _ := common.ReadAll(request.Body)
-    s.send(common.Success, "", resData)
+    for {
+        isLast := false
+        resData, _ := common.ReadAll(tcp)
+
+        if "0\r\n\r\n" == string(resData[len(resData)-5:]) {
+            isLast = true
+        }
+
+        s.send(common.Success, "", resData, isLast)
+        if isLast {
+            break
+        }
+    }
 }
 
 // send 向http请求发送响应
-func (s *Server) send(code int, message string, data []byte) {
+func (s *Server) send(code int, message string, data []byte, isLast bool) {
     if nil == s.responseWriter {
         return
     }
 
-    httpResponse := common.HttpResponse{Code: code, Message: message, Data: data}
+    httpResponse := common.HttpResponse{Code: code, Message: message, Data: data, IsLast: isLast}
     body, _ := json.Marshal(httpResponse)
 
     _, _ = s.responseWriter.Write(body)

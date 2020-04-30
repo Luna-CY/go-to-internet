@@ -13,5 +13,6 @@ type HttpResponse struct {
     Code    int    `json:"code"`
     Message string `json:"message"`
 
-    Data []byte `json:"data,omitempty"`
+    Data   []byte `json:"data,omitempty"`
+    IsLast bool   `json:"is_last,omitempty"`
 }

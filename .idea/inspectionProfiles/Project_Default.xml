@@ -16,6 +16,7 @@
         <method importPath="io" receiver="ReadCloser" name="Close" />
         <method importPath="net" receiver="Listener" name="Close" />
         <method importPath="net" receiver="Conn" name="Close" />
+        <method importPath="net" receiver="*TCPConn" name="Close" />
       </methods>
     </inspection_tool>
   </profile>

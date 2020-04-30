@@ -139,10 +139,11 @@ func (c *Socket) getRemoteAddr(conn net.Conn) (string, int, error) {
         length := make([]byte, 1)
         _, _ = conn.Read(length)
 
-        buffer := make([]byte, int(length[0]))
+        buffer := make([]byte, int(length[0])+2)
         n, _ := conn.Read(buffer)
 
-        ip = string(buffer[2 : n-2])
+        ip = string(buffer[:n-2])
+        port = int(buffer[n-2])<<8 | int(buffer[n-1])
     case 0x04:
         buffer := make([]byte, 18)
         n, _ := conn.Read(buffer)
