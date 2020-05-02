@@ -5,6 +5,7 @@ import (
     "encoding/json"
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/common"
+    "io"
     "net"
     "net/http"
 )
@@ -38,23 +39,5 @@ func (h *HTTP) request() {
         return
     }
 
-    httpResponse := common.HttpResponse{}
-
-    for {
-        resData, _ := common.ReadAll(res.Body)
-
-        _ = json.Unmarshal(resData, &httpResponse)
-        if common.Success != httpResponse.Code {
-            fmt.Println(httpResponse.Message)
-
-            return
-        }
-
-        _, _ = (*h.Conn).Write(httpResponse.Data)
-        if httpResponse.IsLast {
-            res.Body.Close()
-
-            break
-        }
-    }
+    _, _ = io.Copy(*h.Conn, res.Body)
 }
