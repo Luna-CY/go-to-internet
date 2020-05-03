@@ -10,20 +10,42 @@ import (
     "net/http"
 )
 
+var connections map[string]*connection
+
+// init
+func init() {
+    if nil == connections {
+        connections = make(map[string]*connection)
+    }
+}
+
 // HTTP 结构体
 type HTTP struct {
-    Sock *Socket   // Socket结构体指针
-    Conn *net.Conn // socket连接指针
+    Sock     *Socket   // Socket结构体指针
+    SockConn *net.Conn // socket连接指针
 
     TargetIp   string // 请求目标的ip
     TargetPort int    // 请求目标的端口
 }
 
+// connection 获取连接句柄
+func (h *HTTP) connection(ip string, port int) *connection {
+    key := fmt.Sprintf("%v:%d", ip, port)
+    if conn, ok := connections[key]; ok && !conn.closed {
+        return conn
+    }
+
+    fmt.Printf("创建到代理服务器的连接: %v:%d\n", ip, port)
+    connections[key] = &connection{client: &http.Client{}}
+
+    return connections[key]
+}
+
 // request 处理http请求
 func (h *HTTP) request() {
-    client := http.Client{}
+    conn := h.connection(h.TargetIp, h.TargetPort)
 
-    reqData, _ := common.ReadAll(*h.Conn)
+    reqData, _ := common.ReadAll(*h.SockConn)
     request := common.HttpRequest{TargetIp: h.TargetIp, TargetPort: h.TargetPort, Data: reqData}
     if h.Sock.Authorize {
         request.Username = h.Sock.Username
@@ -33,15 +55,9 @@ func (h *HTTP) request() {
 
     fmt.Printf("request to %v:%d\n", request.TargetIp, request.TargetPort)
     req, _ := http.NewRequest("POST", fmt.Sprintf("https://%v:%d", h.Sock.Hostname, h.Sock.Port), bytes.NewBuffer(body))
+    defer req.Body.Close()
 
-    res, err := client.Do(req)
-    req.Body.Close()
-
-    if nil != err {
-        fmt.Println(err)
-
-        return
+    if res, err := conn.do(req); nil == err {
+        _, _ = io.Copy(*h.SockConn, res.Body)
     }
-
-    _, _ = io.Copy(*h.Conn, res.Body)
 }

@@ -11,6 +11,15 @@ import (
     "time"
 )
 
+var connections map[string]*net.Conn
+
+// init
+func init() {
+    if nil == connections {
+        connections = make(map[string]*net.Conn)
+    }
+}
+
 // Server 结构体
 type Server struct {
     NginxVersion string
@@ -36,6 +45,8 @@ func (s *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 // get 处理HTTP GET请求
 func (s *Server) get() {
+    s.request.Body.Close() // 直接关闭通道，不接收任何数据
+
     s.writer.Header().Set("Server", s.NginxVersion)
     s.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
     s.writer.Header().Set("Cache-Control", "no-cache")
@@ -48,23 +59,41 @@ func (s *Server) get() {
     gw := gzip.NewWriter(s.writer)
     defer gw.Close()
 
-    flusher, ok := s.writer.(http.Flusher)
-    if !ok {
-        s.p500()
+    if flusher, ok := s.writer.(http.Flusher); ok {
+        s.writer.WriteHeader(200)
+        _, _ = gw.Write(body)
+
+        flusher.Flush()
 
         return
     }
 
-    s.writer.WriteHeader(200)
-    _, _ = gw.Write(body)
+    s.p500()
+}
 
-    flusher.Flush()
+// connection 获取tcp连接句柄
+func (s *Server) connection(ip string, port int) *net.Conn {
+    key := fmt.Sprintf("%v:%d", ip, port)
+    if conn, ok := connections[key]; ok {
+        return conn
+    }
+
+    fmt.Printf("创建到目标服务器连接: %v:%d\n", ip, port)
+    connection, err := net.Dial("tcp", fmt.Sprintf("%v:%d", ip, port))
+    if nil != err {
+        fmt.Printf("连接目标服务器失败 %v:%d\n", ip, port)
+
+        return nil
+    }
+    connections[key] = &connection
+
+    return connections[key]
 }
 
 // post 处理HTTP POST请求
 func (s *Server) post() {
     reqData, _ := common.ReadAll(s.request.Body)
-    s.request.Body.Close()
+    defer s.request.Body.Close()
 
     httpRequest := common.HttpRequest{}
     err := json.Unmarshal(reqData, &httpRequest)
@@ -77,23 +106,16 @@ func (s *Server) post() {
     }
 
     fmt.Printf("%v 请求 %v:%d\n", s.request.RemoteAddr, httpRequest.TargetIp, httpRequest.TargetPort)
+    if conn := s.connection(httpRequest.TargetIp, httpRequest.TargetPort); nil != conn {
+        if _, err = (*conn).Write(httpRequest.Data); nil != err {
+            fmt.Printf("向目标服务器发送数据失败: %v\n", err)
 
-    tcp, err := net.Dial("tcp", fmt.Sprintf("%v:%d", httpRequest.TargetIp, httpRequest.TargetPort))
-    if nil != err {
-        fmt.Printf("连接目标服务器失败 %v:%d\n", httpRequest.TargetIp, httpRequest.TargetPort)
+            return
+        }
 
-        return
+        _ = (*conn).SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
+        _, _ = io.Copy(s.writer, *conn)
     }
-    defer tcp.Close()
-
-    if _, err = tcp.Write(httpRequest.Data); nil != err {
-        fmt.Printf("向目标服务器发送数据失败: %v\n", err)
-
-        return
-    }
-
-    _ = tcp.SetReadDeadline(time.Now().Add(3000 * time.Millisecond))
-    _, _ = io.Copy(s.writer, tcp)
 }
 
 // auth 用户鉴权

@@ -84,7 +84,7 @@ func (c *Socket) connection(conn net.Conn) {
     _, _ = conn.Write(ack)
 
     // 处理http请求
-    http := HTTP{Sock: c, Conn: &conn, TargetIp: ip, TargetPort: port}
+    http := HTTP{Sock: c, SockConn: &conn, TargetIp: ip, TargetPort: port}
     http.request()
 }
 
