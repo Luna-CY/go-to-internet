@@ -25,6 +25,10 @@ func (h *HTTP) request() {
 
     reqData, _ := common.ReadAll(*h.Conn)
     request := common.HttpRequest{TargetIp: h.TargetIp, TargetPort: h.TargetPort, Data: reqData}
+    if h.Sock.Authorize {
+        request.Username = h.Sock.Username
+        request.Password = h.Sock.Password
+    }
     body, _ := json.Marshal(request)
 
     fmt.Printf("request to %v:%d\n", request.TargetIp, request.TargetPort)

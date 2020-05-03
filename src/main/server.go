@@ -38,7 +38,7 @@ func main() {
     }
 
     server := &http.Server{Addr: fmt.Sprintf(":%d", c.Port)}
-    server.Handler = &proxy.Server{}
+    server.Handler = &proxy.Server{NginxVersion: "nginx/1.14.2"}
 
     if err := http2.ConfigureServer(server, &http2.Server{}); nil != err {
         log.Fatal("配置http/2服务器失败")

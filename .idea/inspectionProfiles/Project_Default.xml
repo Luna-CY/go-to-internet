@@ -17,6 +17,7 @@
         <method importPath="net" receiver="Listener" name="Close" />
         <method importPath="net" receiver="Conn" name="Close" />
         <method importPath="net" receiver="*TCPConn" name="Close" />
+        <method importPath="compress/gzip" receiver="*Writer" name="Close" />
       </methods>
     </inspection_tool>
   </profile>
