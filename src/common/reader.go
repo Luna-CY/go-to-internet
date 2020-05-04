@@ -25,3 +25,19 @@ func ReadAll(reader io.Reader) ([]byte, error) {
         }
     }
 }
+
+// Copy 替代io.Copy方法
+func Copy(writer io.Writer, reader io.Reader) (int, error) {
+    buffer := make([]byte, 256)
+    counter := 0
+
+    for {
+        n, err := reader.Read(buffer)
+        counter += n
+        _, _ = writer.Write(buffer[:n])
+
+        if nil != err || len(buffer) > n {
+            return counter, err
+        }
+    }
+}

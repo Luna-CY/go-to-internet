@@ -5,10 +5,8 @@ import (
     "encoding/json"
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/common"
-    "io"
     "net"
     "net/http"
-    "time"
 )
 
 var connections map[string]*net.Conn
@@ -17,6 +15,16 @@ var connections map[string]*net.Conn
 func init() {
     if nil == connections {
         connections = make(map[string]*net.Conn)
+    }
+}
+
+// Close 关闭连接池
+func Close() {
+    if nil != connections {
+        for key := range connections {
+            fmt.Println("关闭连接: ", key)
+            (*connections[key]).Close()
+        }
     }
 }
 
@@ -105,7 +113,6 @@ func (s *Server) post() {
         return
     }
 
-    fmt.Printf("%v 请求 %v:%d\n", s.request.RemoteAddr, httpRequest.TargetIp, httpRequest.TargetPort)
     if conn := s.connection(httpRequest.TargetIp, httpRequest.TargetPort); nil != conn {
         if _, err = (*conn).Write(httpRequest.Data); nil != err {
             fmt.Printf("向目标服务器发送数据失败: %v\n", err)
@@ -113,8 +120,27 @@ func (s *Server) post() {
             return
         }
 
-        _ = (*conn).SetReadDeadline(time.Now().Add(1000 * time.Millisecond))
-        _, _ = io.Copy(s.writer, *conn)
+        flusher, ok := s.writer.(http.Flusher)
+        if ok {
+            s.writer.Header().Set("Content-Type", "application/octet-stream")
+            s.writer.Header().Set("Content-Length", "-1")
+
+            var data []byte
+            buffer := make([]byte, 256)
+            for {
+                n, err := (*conn).Read(buffer)
+                _, _ = s.writer.Write(buffer[:n])
+                data = append(data, buffer[:n]...)
+                flusher.Flush()
+
+                if nil != err || len(buffer) > n {
+                    break
+                }
+            }
+
+            fmt.Println(string(data))
+            s.writer.WriteHeader(200)
+        }
     }
 }
 

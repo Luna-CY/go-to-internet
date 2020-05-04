@@ -5,7 +5,6 @@ import (
     "encoding/json"
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/common"
-    "io"
     "net"
     "net/http"
 )
@@ -53,11 +52,13 @@ func (h *HTTP) request() {
     }
     body, _ := json.Marshal(request)
 
-    fmt.Printf("request to %v:%d\n", request.TargetIp, request.TargetPort)
     req, _ := http.NewRequest("POST", fmt.Sprintf("https://%v:%d", h.Sock.Hostname, h.Sock.Port), bytes.NewBuffer(body))
     defer req.Body.Close()
 
     if res, err := conn.do(req); nil == err {
-        _, _ = io.Copy(*h.SockConn, res.Body)
+        _, err = common.Copy(*h.SockConn, res.Body)
+        if nil != err {
+            fmt.Println(err)
+        }
     }
 }
