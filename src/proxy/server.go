@@ -9,28 +9,10 @@ import (
     "net/http"
 )
 
-var connections map[string]*net.Conn
-
-// init
-func init() {
-    if nil == connections {
-        connections = make(map[string]*net.Conn)
-    }
-}
-
-// Close 关闭连接池
-func Close() {
-    if nil != connections {
-        for key := range connections {
-            fmt.Println("关闭连接: ", key)
-            (*connections[key]).Close()
-        }
-    }
-}
-
 // Server 结构体
 type Server struct {
     NginxVersion string
+    Conn         net.Conn
 
     request *http.Request
     writer  http.ResponseWriter

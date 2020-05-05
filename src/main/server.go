@@ -1,13 +1,12 @@
 package main
 
 import (
+    "crypto/tls"
     "flag"
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/proxy"
-    "golang.org/x/net/http2"
-    "log"
-    "net/http"
     "os"
+    "time"
 )
 
 // serverCommandUsage 打印控制台Usage信息
@@ -18,35 +17,52 @@ func serverCommandUsage() {
 }
 
 func main() {
-    c := &proxy.ServerConfig{}
+    fmt.Println(time.Now().Unix())
+    fmt.Println([]byte(fmt.Sprintf("%d", time.Now().Unix())))
+    config := &proxy.ServerConfig{}
 
-    flag.StringVar(&c.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
-    flag.IntVar(&c.Port, "p", 443, "监听端口号")
+    flag.StringVar(&config.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
+    flag.IntVar(&config.Port, "p", 443, "监听端口号")
 
-    flag.StringVar(&c.SSLCrtFile, "c", "", "SSL CRT文件路径")
-    flag.StringVar(&c.SSLKeyFile, "k", "", "SSL KEY文件路径")
-
-    flag.BoolVar(&c.Authorize, "auth", false, "是否开启用户身份验证，默认不启用")
+    flag.StringVar(&config.SSLCrtFile, "config", "", "SSL CRT文件路径")
+    flag.StringVar(&config.SSLKeyFile, "k", "", "SSL KEY文件路径")
 
     flag.Usage = serverCommandUsage
     flag.Parse()
 
-    if "" == c.Hostname || "" == c.SSLCrtFile || "" == c.SSLKeyFile {
+    if "" == config.Hostname || "" == config.SSLCrtFile || "" == config.SSLKeyFile {
         flag.Usage()
 
         os.Exit(0)
     }
 
-    server := &http.Server{Addr: fmt.Sprintf(":%d", c.Port)}
-    server.Handler = &proxy.Server{NginxVersion: "nginx/1.14.2"}
-    defer proxy.Close()
+    tlsListen(config)
+}
 
-    if err := http2.ConfigureServer(server, &http2.Server{}); nil != err {
-        log.Fatal("配置http/2服务器失败")
+// tlsListen 启动tls服务器
+func tlsListen(config *proxy.ServerConfig) {
+    cert, err := tls.LoadX509KeyPair(config.SSLCrtFile, config.SSLKeyFile)
+    if nil != err {
+        fmt.Println("加载TLS证书失败: ", err)
+
+        return
     }
+    conf := &tls.Config{Certificates: []tls.Certificate{cert}}
+    ln, err := tls.Listen("tcp", fmt.Sprintf(":%d", config.Port), conf)
+    if nil != err {
+        fmt.Println("启动服务器失败: ", err)
 
-    fmt.Printf("启动监听 %v:%d ...\n", c.Hostname, c.Port)
-    if err := server.ListenAndServeTLS(c.SSLCrtFile, c.SSLKeyFile); nil != err {
-        log.Fatal("启动http/2服务器失败")
+        return
+    }
+    defer ln.Close()
+    fmt.Printf("启动监听 %v:%d ...\n", config.Hostname, config.Port)
+
+    for {
+        conn, err := ln.Accept()
+        if nil != err {
+            continue
+        }
+
+        go proxy.StartConnection(conn, config)
     }
 }
