@@ -4,6 +4,8 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/tunnel"
+    "io"
     "log"
     "net"
 )
@@ -41,22 +43,22 @@ func (c *Socket) Start() {
 }
 
 // connection 处理socket连接请求
-func (c *Socket) connection(conn net.Conn) {
-    defer conn.Close()
+func (c *Socket) connection(src net.Conn) {
+    defer src.Close()
 
-    if !c.isSocks5(conn) || !c.authorize(conn) {
+    if !c.isSocks5(src) || !c.authorize(src) {
         return
     }
 
-    if !c.isConnectCmd(conn) {
-        _, _ = conn.Write([]byte{0x05, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+    if !c.isConnectCmd(src) {
+        _, _ = src.Write([]byte{0x05, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
         return
     }
 
-    ip, port, err := c.getRemoteAddr(conn)
+    ip, port, err := c.getRemoteAddr(src)
     if nil != err {
-        _, _ = conn.Write([]byte{0x05, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+        _, _ = src.Write([]byte{0x05, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
         return
     }
@@ -81,11 +83,18 @@ func (c *Socket) connection(conn net.Conn) {
         index++
     }
 
-    _, _ = conn.Write(ack)
+    _, _ = src.Write(ack)
 
-    // 处理http请求
-    http := HTTP{Sock: c, SockConn: &conn, TargetIp: ip, TargetPort: port}
-    http.request()
+    dst, err := tunnel.StartTunnel(c, ip, port)
+    if nil != err {
+        fmt.Println(err)
+
+        return
+    }
+    defer dst.Close()
+
+    _, _ = io.Copy(dst, src)
+    _, _ = io.Copy(src, dst)
 }
 
 // isSocks5 检查连接是否是socks5协议

@@ -17,3 +17,5 @@ package tunnel
 // 响应消息
 // VER CODE MSG_N MSG
 //  1   1     1    N
+
+const VER01 = 0x01

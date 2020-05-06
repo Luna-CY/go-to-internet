@@ -4,7 +4,6 @@ import (
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/http"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
-    "io"
     "net"
 )
 
@@ -54,13 +53,18 @@ func StartConnection(src net.Conn, config *ServerConfig) {
         return
     }
 
-    ip, port, err := tunnel.GetTarget(&src)
+    ip, port, err := tunnel.ReceiveTarget(&src)
     if nil != err {
+        fmt.Println(err)
+
         return
     }
 
-    dst := connection(ip, port)
-    _, _ = io.Copy(src, *dst)
+    fmt.Println("ip: ", ip, " -> ", port)
+
+    //dst := connection(ip, port)
+    //_, _ = io.Copy(*dst, src)
+    //_, _ = io.Copy(src, *dst)
 }
 
 func CheckUser(username, password string) bool {

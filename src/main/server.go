@@ -6,7 +6,6 @@ import (
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/proxy"
     "os"
-    "time"
 )
 
 // serverCommandUsage 打印控制台Usage信息
@@ -17,8 +16,6 @@ func serverCommandUsage() {
 }
 
 func main() {
-    fmt.Println(time.Now().Unix())
-    fmt.Println([]byte(fmt.Sprintf("%d", time.Now().Unix())))
     config := &proxy.ServerConfig{}
 
     flag.StringVar(&config.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
