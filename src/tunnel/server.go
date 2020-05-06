@@ -70,6 +70,10 @@ func (s *Server) receiveUserInfo() (string, string, error) {
         return "", "", errors.New("读取版本号失败")
     }
 
+    if VER01 != ver[0] {
+        return "", "", errors.New("不支持的协议版本")
+    }
+
     uLen := make([]byte, 1)
     n, err = s.src.Read(uLen)
     if n != 1 || nil != err {
@@ -126,6 +130,10 @@ func (s *Server) receiveTarget() (string, int, error) {
     n, err := s.src.Read(ver)
     if n != 1 || nil != err {
         return "", 0, errors.New("读取版本号失败")
+    }
+
+    if VER01 != ver[0] {
+        return "", 0, errors.New("不支持的协议版本")
     }
 
     port := make([]byte, 2)

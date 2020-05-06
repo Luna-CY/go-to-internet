@@ -34,13 +34,80 @@ func (c *Client) Bind(src net.Conn) {}
 
 // connect 连接服务器
 func (c *Client) connect() error {
-    // TODO: 发送用户验证
+    if err := c.sendUserInfo(); nil != err {
+        return err
+    }
+
+    if err := c.receiveOk(); nil != err {
+        return err
+    }
+
     if err := c.sendTarget(); nil != err {
         return err
     }
 
     if err := c.receiveRes(); nil != err {
         return err
+    }
+
+    return nil
+}
+
+// sendUserInfo 发送用户信息
+func (c *Client) sendUserInfo() error {
+    dataLength := 1 + 1 + len(c.config.ServerUsername) + 1 + len(c.config.ServerPassword)
+    data := make([]byte, dataLength)
+    data[0] = VER01
+    data[1] = byte(len(c.config.ServerUsername))
+
+    index := 2
+    for _, d := range []byte(c.config.ServerUsername) {
+        data[index] = d
+        index++
+    }
+
+    data[index] = byte(len(c.config.ServerPassword))
+    index++
+
+    for _, d := range []byte(c.config.ServerPassword) {
+        data[index] = d
+        index++
+    }
+
+    n, err := c.conn.Write(data)
+    if n != dataLength || nil != err {
+        c.conn.Close()
+
+        return errors.New("写入数据失败")
+    }
+
+    return nil
+}
+
+// receiveRes 读取应答消息
+func (c *Client) receiveOk() error {
+    ver := make([]byte, 1)
+    n, err := c.conn.Read(ver)
+    if n != 1 || nil != err {
+        c.conn.Close()
+
+        return errors.New("读取应答消息失败")
+    }
+
+    if VER01 != ver[0] {
+        return errors.New("读取应答消息失败")
+    }
+
+    ok := make([]byte, 1)
+    n, err = c.conn.Read(ok)
+    if n != 1 || nil != err {
+        c.conn.Close()
+
+        return errors.New("读取应答消息失败")
+    }
+
+    if 0x01 != ok[0] {
+        return errors.New("读取应答消息失败")
     }
 
     return nil
@@ -72,7 +139,6 @@ func (c *Client) sendTarget() error {
         index++
     }
 
-    fmt.Println("发送目标信息: ", data, " -> ", string(data))
     n, err := c.conn.Write(data)
     if n != dataLength || nil != err {
         c.conn.Close()
@@ -93,12 +159,20 @@ func (c *Client) receiveRes() error {
         return errors.New("读取应答版本号失败")
     }
 
+    if VER01 != ver[0] {
+        return errors.New("不支持的协议版本")
+    }
+
     code := make([]byte, 1)
     n, err = c.conn.Read(code)
     if n != 1 || nil != err {
         c.conn.Close()
 
         return errors.New("读取响应码失败")
+    }
+
+    if 0x01 != code[0] {
+        return errors.New("未识别的响应码")
     }
 
     msgLen := make([]byte, 1)
