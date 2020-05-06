@@ -25,5 +25,5 @@ func (s *Socket) startTunnel(src net.Conn, ipType byte, ip string, port int) {
         return
     }
 
-    dst.Bind(src)
+    _ = dst.Bind(src)
 }

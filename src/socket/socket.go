@@ -15,7 +15,6 @@ type Socket struct {
     LocalAddr string // 本地监听地址
     LocalPort int    // 本地监听端口
 
-    Authorize bool   // 是否需要身份认证
     Username  string // 身份认证用户名
     Password  string // 身份认证密码
 }
@@ -42,8 +41,6 @@ func (s *Socket) Start() {
 
 // connection 处理socket连接请求
 func (s *Socket) connection(src net.Conn) {
-    defer src.Close()
-
     if !s.isSocks5(src) || !s.authorize(src) {
         return
     }

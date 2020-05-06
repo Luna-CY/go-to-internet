@@ -5,12 +5,11 @@ import (
     "fmt"
     "io"
     "net"
-    "time"
 )
 
 // NewServer 新建一个隧道的服务端
 func NewServer(src net.Conn) (*Server, error) {
-    server := &Server{src: src}
+    server := &Server{clientConn: src}
     if !server.checkConnection() {
         return nil, errors.New("验证连接失败")
     }
@@ -20,28 +19,28 @@ func NewServer(src net.Conn) (*Server, error) {
 
 // Server 隧道的服务端结构体
 type Server struct {
-    src net.Conn
+    clientConn net.Conn
+
+    dstIp   string
+    dstPort int
 }
 
 // Bind 双向绑定客户端以及目标服务器
 func (s *Server) Bind() error {
-    ip, port, err := s.receiveTarget()
+    fmt.Printf("建立请求 -> %v:%d\n", s.dstIp, s.dstPort)
+
+    dst, err := net.Dial("tcp", fmt.Sprintf("%v:%d", s.dstIp, s.dstPort))
     if nil != err {
         return err
     }
-
-    dst, err := net.Dial("tcp", fmt.Sprintf("%v:%d", ip, port))
-    if nil != err {
-        return err
-    }
-
     defer dst.Close()
 
     go func() {
-        _, _ = io.Copy(s.src, dst)
+        defer s.clientConn.Close()
+        _, _ = io.Copy(s.clientConn, dst)
 
     }()
-    _, _ = io.Copy(dst, s.src)
+    _, _ = io.Copy(dst, s.clientConn)
 
     return nil
 }
@@ -55,7 +54,11 @@ func (s *Server) checkConnection() bool {
 
     // TODO: 检查用户信息是否有效
 
-    if err = s.sendTimeout(); nil != err {
+    if err := s.parseTarget(); nil != err {
+        return false
+    }
+
+    if err := s.sendRes(); nil != err {
         return false
     }
 
@@ -65,104 +68,78 @@ func (s *Server) checkConnection() bool {
 // receiveUserInfo 获取用户信息
 func (s *Server) receiveUserInfo() (string, string, error) {
     ver := make([]byte, 1)
-    n, err := s.src.Read(ver)
+    n, err := s.clientConn.Read(ver)
     if n != 1 || nil != err {
+        fmt.Println(err)
+        fmt.Println("读取版本号失败")
         return "", "", errors.New("读取版本号失败")
     }
 
     if VER01 != ver[0] {
+        fmt.Println("不支持的协议版本")
         return "", "", errors.New("不支持的协议版本")
     }
 
     uLen := make([]byte, 1)
-    n, err = s.src.Read(uLen)
+    n, err = s.clientConn.Read(uLen)
     if n != 1 || nil != err {
+        fmt.Println("读取用户名称长度失败")
         return "", "", errors.New("读取用户名称长度失败")
     }
 
     user := make([]byte, uLen[0])
-    n, err = s.src.Read(user)
+    n, err = s.clientConn.Read(user)
     if n != int(uLen[0]) || nil != err {
+        fmt.Println("读取用户名称失败")
         return "", "", errors.New("读取用户名称失败")
     }
 
     pLen := make([]byte, 1)
-    n, err = s.src.Read(pLen)
+    n, err = s.clientConn.Read(pLen)
     if n != 1 || nil != err {
+        fmt.Println("读取用户密码长度失败")
         return "", "", errors.New("读取用户密码长度失败")
     }
 
     pass := make([]byte, pLen[0])
-    n, err = s.src.Read(pass)
+    n, err = s.clientConn.Read(pass)
     if n != int(pLen[0]) || nil != err {
+        fmt.Println("读取用户密码失败")
         return "", "", errors.New("读取用户密码失败")
     }
 
     return string(user), string(pass), nil
 }
 
-// sendTimeout 发送超时时间设置
-func (s *Server) sendTimeout() error {
-    dataLength := 11
-
-    data := make([]byte, dataLength)
-    data[0] = VER01
-
-    index := 1
-    for _, d := range []byte(fmt.Sprintf("%d", time.Now().Unix())) {
-        data[index] = d
-        index++
-    }
-
-    n, err := s.src.Write(data)
-    if n != dataLength || nil != err {
-        s.src.Close()
-
-        return errors.New("写入数据失败")
-    }
-
-    return nil
-}
-
-// ReceiveTarget 获取目标服务器信息
-func (s *Server) receiveTarget() (string, int, error) {
-    ver := make([]byte, 1)
-    n, err := s.src.Read(ver)
-    if n != 1 || nil != err {
-        return "", 0, errors.New("读取版本号失败")
-    }
-
-    if VER01 != ver[0] {
-        return "", 0, errors.New("不支持的协议版本")
-    }
-
+// parseTarget 解析目标信息
+func (s *Server) parseTarget() error {
     port := make([]byte, 2)
-    n, err = s.src.Read(port)
+    n, err := s.clientConn.Read(port)
     if n != 2 || nil != err {
-        return "", 0, errors.New("读取端口号失败")
+        fmt.Println("解析端口失败")
+        return errors.New("解析端口失败")
     }
+    s.dstPort = int(port[0])<<8 | int(port[1])
 
     ipType := make([]byte, 1)
-    n, err = s.src.Read(ipType)
+    n, err = s.clientConn.Read(ipType)
     if n != 1 || nil != err {
-        return "", 0, errors.New("读取ip类型失败")
+        fmt.Println("解析ip类型失败")
+        return errors.New("解析ip类型失败")
     }
 
     ipLen := make([]byte, 1)
-    n, err = s.src.Read(ipLen)
+    n, err = s.clientConn.Read(ipLen)
     if n != 1 || nil != err {
-        return "", 0, errors.New("读取ip长度失败")
+        fmt.Println("解析ip长度失败")
+        return errors.New("解析ip长度失败")
     }
 
     ip := make([]byte, ipLen[0])
-    n, err = s.src.Read(ip)
+    n, err = s.clientConn.Read(ip)
     if n != int(ipLen[0]) || nil != err {
-        return "", 0, errors.New("读取ip失败")
-    }
-
-    err = s.sendRes()
-    if nil != err {
-        return "", 0, err
+        fmt.Println("解析ip失败")
+        return errors.New("解析ip失败")
     }
 
     var ipString string
@@ -174,8 +151,9 @@ func (s *Server) receiveTarget() (string, int, error) {
     case 0x04:
         ipString = net.IP(ip[0:16]).String()
     }
+    s.dstIp = ipString
 
-    return ipString, int(port[0])<<8 | int(port[1]), nil
+    return nil
 }
 
 // sendRes 发送响应数据
@@ -192,9 +170,9 @@ func (s *Server) sendRes() error {
         index++
     }
 
-    n, err := s.src.Write(data)
+    n, err := s.clientConn.Write(data)
     if n != dataLength || nil != err {
-        s.src.Close()
+        s.clientConn.Close()
         return errors.New("写入数据失败")
     }
 

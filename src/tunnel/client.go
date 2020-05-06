@@ -5,6 +5,7 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
+    "io"
     "net"
 )
 
@@ -15,7 +16,7 @@ func NewClient(config *Config) (*Client, error) {
         return nil, err
     }
 
-    client := &Client{conn: conn}
+    client := &Client{serverConn: conn, config: config}
     if err = client.connect(); nil != err {
         return nil, err
     }
@@ -25,16 +26,26 @@ func NewClient(config *Config) (*Client, error) {
 
 // Client 隧道的客户端结构体
 type Client struct {
-    conn   net.Conn
-    config *Config
+    serverConn net.Conn // 服务器连接
+    config     *Config
 }
 
 // Bind 双向绑定服务端以及请求来源
-func (c *Client) Bind(src net.Conn) {}
+func (c *Client) Bind(src net.Conn) error {
+    defer src.Close()
+
+    go func() {
+        defer c.serverConn.Close()
+        _, _ = io.Copy(c.serverConn, src)
+    }()
+    _, _ = io.Copy(src, c.serverConn)
+
+    return nil
+}
 
 // connect 连接服务器
 func (c *Client) connect() error {
-    if err := c.sendUserInfo(); nil != err {
+    if err := c.sendConnectData(); nil != err {
         return err
     }
 
@@ -42,20 +53,15 @@ func (c *Client) connect() error {
         return err
     }
 
-    if err := c.sendTarget(); nil != err {
-        return err
-    }
-
-    if err := c.receiveRes(); nil != err {
-        return err
-    }
-
     return nil
 }
 
-// sendUserInfo 发送用户信息
-func (c *Client) sendUserInfo() error {
-    dataLength := 1 + 1 + len(c.config.ServerUsername) + 1 + len(c.config.ServerPassword)
+// sendConnectData 发送用户信息
+func (c *Client) sendConnectData() error {
+    userInfoLen := 1 + 1 + len(c.config.ServerUsername) + 1 + len(c.config.ServerPassword)
+    targetInfoLen := 2 + 1 + 1 + len(c.config.TargetHostOrIp)
+    dataLength := userInfoLen + targetInfoLen
+
     data := make([]byte, dataLength)
     data[0] = VER01
     data[1] = byte(len(c.config.ServerUsername))
@@ -74,55 +80,9 @@ func (c *Client) sendUserInfo() error {
         index++
     }
 
-    n, err := c.conn.Write(data)
-    if n != dataLength || nil != err {
-        c.conn.Close()
-
-        return errors.New("写入数据失败")
-    }
-
-    return nil
-}
-
-// receiveRes 读取应答消息
-func (c *Client) receiveOk() error {
-    ver := make([]byte, 1)
-    n, err := c.conn.Read(ver)
-    if n != 1 || nil != err {
-        c.conn.Close()
-
-        return errors.New("读取应答消息失败")
-    }
-
-    if VER01 != ver[0] {
-        return errors.New("读取应答消息失败")
-    }
-
-    ok := make([]byte, 1)
-    n, err = c.conn.Read(ok)
-    if n != 1 || nil != err {
-        c.conn.Close()
-
-        return errors.New("读取应答消息失败")
-    }
-
-    if 0x01 != ok[0] {
-        return errors.New("读取应答消息失败")
-    }
-
-    return nil
-}
-
-// sendTarget 发送target信息
-func (c *Client) sendTarget() error {
-    dataLength := 1 + 2 + 1 + 1 + len(c.config.TargetHostOrIp)
-    data := make([]byte, dataLength)
-    data[0] = VER01
-
     bs := make([]byte, 2)
     binary.BigEndian.PutUint16(bs, uint16(c.config.TargetPort))
 
-    index := 1
     for _, d := range bs {
         data[index] = d
         index++
@@ -139,9 +99,9 @@ func (c *Client) sendTarget() error {
         index++
     }
 
-    n, err := c.conn.Write(data)
+    n, err := c.serverConn.Write(data)
     if n != dataLength || nil != err {
-        c.conn.Close()
+        c.serverConn.Close()
 
         return errors.New("写入数据失败")
     }
@@ -150,11 +110,11 @@ func (c *Client) sendTarget() error {
 }
 
 // receiveRes 读取响应消息
-func (c *Client) receiveRes() error {
+func (c *Client) receiveOk() error {
     ver := make([]byte, 1)
-    n, err := c.conn.Read(ver)
+    n, err := c.serverConn.Read(ver)
     if n != 1 || nil != err {
-        c.conn.Close()
+        c.serverConn.Close()
 
         return errors.New("读取应答版本号失败")
     }
@@ -164,29 +124,29 @@ func (c *Client) receiveRes() error {
     }
 
     code := make([]byte, 1)
-    n, err = c.conn.Read(code)
+    n, err = c.serverConn.Read(code)
     if n != 1 || nil != err {
-        c.conn.Close()
+        c.serverConn.Close()
 
         return errors.New("读取响应码失败")
     }
 
-    if 0x01 != code[0] {
+    if 0x00 != code[0] {
         return errors.New("未识别的响应码")
     }
 
     msgLen := make([]byte, 1)
-    n, err = c.conn.Read(msgLen)
+    n, err = c.serverConn.Read(msgLen)
     if n != 1 || nil != err {
-        c.conn.Close()
+        c.serverConn.Close()
 
         return errors.New("读取消息长度失败")
     }
 
     msg := make([]byte, msgLen[0])
-    n, err = c.conn.Read(msg)
+    n, err = c.serverConn.Read(msg)
     if n != int(msgLen[0]) || nil != err {
-        c.conn.Close()
+        c.serverConn.Close()
 
         return errors.New("读取消息失败")
     }
