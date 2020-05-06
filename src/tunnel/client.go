@@ -8,13 +8,13 @@ import (
     "net"
 )
 
-func StartTunnel(serverHost string, serverPort int, ip string, port int) (net.Conn, error) {
+func StartTunnel(serverHost string, serverPort int, ipType byte, ip string, port int) (net.Conn, error) {
     connection, err := tls.Dial("tcp", fmt.Sprintf("%v:%d", serverHost, serverPort), nil)
     if nil != err {
         return nil, err
     }
 
-    if err = sendTarget(connection, ip, port); nil != err {
+    if err = sendTarget(connection, ipType, ip, port); nil != err {
         return nil, err
     }
 
@@ -26,8 +26,8 @@ func StartTunnel(serverHost string, serverPort int, ip string, port int) (net.Co
 }
 
 // sendTarget 发送target信息
-func sendTarget(connection net.Conn, ip string, port int) error {
-    dataLength := 1 + 2 + 1 + len(ip)
+func sendTarget(connection net.Conn, ipType byte, ip string, port int) error {
+    dataLength := 1 + 2 + 1 + 1 + len(ip)
     data := make([]byte, dataLength)
     data[0] = VER01
 
@@ -39,6 +39,9 @@ func sendTarget(connection net.Conn, ip string, port int) error {
         data[index] = d
         index++
     }
+
+    data[index] = ipType
+    index++
 
     data[index] = byte(len(ip))
     index++

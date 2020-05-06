@@ -4,8 +4,6 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
-    "gitee.com/Luna-CY/go-to-internet/src/tunnel"
-    "io"
     "log"
     "net"
 )
@@ -23,12 +21,12 @@ type Socket struct {
 }
 
 // Start 启动本地服务监听
-func (c *Socket) Start() {
-    fmt.Printf("启动监听 %v:%d ...\n", c.LocalAddr, c.LocalPort)
+func (s *Socket) Start() {
+    fmt.Printf("启动监听 %v:%d ...\n", s.LocalAddr, s.LocalPort)
 
-    listen, err := net.Listen("tcp", fmt.Sprintf("%v:%d", c.LocalAddr, c.LocalPort))
+    listen, err := net.Listen("tcp", fmt.Sprintf("%v:%d", s.LocalAddr, s.LocalPort))
     if nil != err {
-        log.Fatal(fmt.Sprintf("监听地址 %v:%d 失败", c.LocalAddr, c.LocalPort))
+        log.Fatal(fmt.Sprintf("监听地址 %v:%d 失败", s.LocalAddr, s.LocalPort))
     }
     defer listen.Close()
 
@@ -38,71 +36,37 @@ func (c *Socket) Start() {
             log.Fatal("接收请求失败")
         }
 
-        go c.connection(conn)
+        go s.connection(conn)
     }
 }
 
 // connection 处理socket连接请求
-func (c *Socket) connection(src net.Conn) {
+func (s *Socket) connection(src net.Conn) {
     defer src.Close()
 
-    if !c.isSocks5(src) || !c.authorize(src) {
+    if !s.isSocks5(src) || !s.authorize(src) {
         return
     }
 
-    if !c.isConnectCmd(src) {
+    if !s.isConnectCmd(src) {
         _, _ = src.Write([]byte{0x05, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
         return
     }
 
-    ip, port, err := c.getRemoteAddr(src)
+    ipType, ip, port, err := s.getRemoteAddr(src)
     if nil != err {
         _, _ = src.Write([]byte{0x05, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 
         return
     }
+    s.sendAck(src)
 
-    ack := make([]byte, 4+1+len(c.Hostname)+2)
-    ack[0] = 0x05 // VER
-    ack[1] = 0x00 // REP
-    ack[2] = 0x00 // RSV
-    ack[3] = 0x03 // ATYP: 域名
-    ack[4] = byte(len(c.Hostname))
-
-    index := 5
-    for _, d := range []byte(c.Hostname) {
-        ack[index] = d
-        index++
-    }
-
-    bs := make([]byte, 2)
-    binary.BigEndian.PutUint16(bs, uint16(c.Port))
-    for _, d := range bs {
-        ack[index] = d
-        index++
-    }
-
-    _, _ = src.Write(ack)
-
-    dst, err := tunnel.StartTunnel(c.Hostname, c.Port, ip, port)
-    if nil != err {
-        fmt.Println(err)
-
-        return
-    }
-    defer dst.Close()
-
-    go func () {
-        defer src.Close()
-        _, _ = io.Copy(src, dst)
-
-    }()
-    _, _ = io.Copy(dst, src)
+    s.startTunnel(src, ipType, ip, port)
 }
 
 // isSocks5 检查连接是否是socks5协议
-func (c *Socket) isSocks5(conn net.Conn) bool {
+func (s *Socket) isSocks5(conn net.Conn) bool {
     buffer := make([]byte, 1)
     _, _ = conn.Read(buffer)
 
@@ -110,7 +74,7 @@ func (c *Socket) isSocks5(conn net.Conn) bool {
 }
 
 // authorize 身份验证
-func (c *Socket) authorize(conn net.Conn) bool {
+func (s *Socket) authorize(conn net.Conn) bool {
     // 身份验证应答：不需要验证
     _, _ = conn.Write([]byte{0x05, 0x00})
 
@@ -122,7 +86,7 @@ func (c *Socket) authorize(conn net.Conn) bool {
 }
 
 // isConnectCmd 检查连接是否是connect类型的命令
-func (c *Socket) isConnectCmd(conn net.Conn) bool {
+func (s *Socket) isConnectCmd(conn net.Conn) bool {
     // 取出前三个字节
     buffer := make([]byte, 3)
     _, _ = conn.Read(buffer)
@@ -135,7 +99,7 @@ func (c *Socket) isConnectCmd(conn net.Conn) bool {
 }
 
 // getRemoteAddr 获取远程目标的ip和端口
-func (c *Socket) getRemoteAddr(conn net.Conn) (string, int, error) {
+func (s *Socket) getRemoteAddr(conn net.Conn) (byte, string, int, error) {
     atyp := make([]byte, 1)
     _, _ = conn.Read(atyp)
 
@@ -164,8 +128,33 @@ func (c *Socket) getRemoteAddr(conn net.Conn) (string, int, error) {
         ip = net.IP(buffer[0:16]).String()
         port = int(buffer[n-2])<<8 | int(buffer[n-1])
     default:
-        return "", 0, errors.New("解析数据失败")
+        return 0x00, "", 0, errors.New("解析数据失败")
     }
 
-    return ip, port, nil
+    return atyp[0], ip, port, nil
+}
+
+// sendAck 发送socket确认信息
+func (s *Socket) sendAck(src net.Conn) {
+    ack := make([]byte, 4+1+len(s.Hostname)+2)
+    ack[0] = 0x05 // VER
+    ack[1] = 0x00 // REP
+    ack[2] = 0x00 // RSV
+    ack[3] = 0x03 // ATYP: 域名
+    ack[4] = byte(len(s.Hostname))
+
+    index := 5
+    for _, d := range []byte(s.Hostname) {
+        ack[index] = d
+        index++
+    }
+
+    bs := make([]byte, 2)
+    binary.BigEndian.PutUint16(bs, uint16(s.Port))
+    for _, d := range bs {
+        ack[index] = d
+        index++
+    }
+
+    _, _ = src.Write(ack)
 }

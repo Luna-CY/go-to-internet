@@ -26,6 +26,12 @@ func ReceiveTarget(conn net.Conn) (string, int, error) {
         return "", 0, errors.New("读取端口号失败")
     }
 
+    ipType := make([]byte, 1)
+    n, err = conn.Read(ipType)
+    if n != 1 || nil != err {
+        return "", 0, errors.New("读取ip类型失败")
+    }
+
     ipLen := make([]byte, 1)
     n, err = conn.Read(ipLen)
     if n != 1 || nil != err {
@@ -43,7 +49,17 @@ func ReceiveTarget(conn net.Conn) (string, int, error) {
         return "", 0, err
     }
 
-    return string(ip), int(port[0])<<8 | int(port[1]), nil
+    var ipString string
+    switch ipType[0] {
+    case 0x01:
+        ipString = net.IP(ip[0:4]).String()
+    case 0x03:
+        ipString = string(ip)
+    case 0x04:
+        ipString = net.IP(ip[0:16]).String()
+    }
+
+    return ipString, int(port[0])<<8 | int(port[1]), nil
 }
 
 // sendRes 发送响应数据

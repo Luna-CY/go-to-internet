@@ -11,8 +11,8 @@ package tunnel
 //  1     10
 //
 // 请求建立到目标服务器连接
-// VER PORT DST_N DST
-//  1   2     1    N
+// VER PORT DST_T DST_N DST
+//  1   2     1     1    N
 //
 // 响应消息
 // VER CODE MSG_N MSG
