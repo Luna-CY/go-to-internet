@@ -85,7 +85,7 @@ func (c *Socket) connection(src net.Conn) {
 
     _, _ = src.Write(ack)
 
-    dst, err := tunnel.StartTunnel(c, ip, port)
+    dst, err := tunnel.StartTunnel(c.Hostname, c.Port, ip, port)
     if nil != err {
         fmt.Println(err)
 

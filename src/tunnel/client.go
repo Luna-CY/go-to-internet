@@ -13,11 +13,11 @@ func StartTunnel(serverHost string, serverPort int, ip string, port int) (net.Co
         return nil, err
     }
 
-    if err = sendTarget(&connection, ip, port); nil != err {
+    if err = sendTarget(connection, ip, port); nil != err {
         return nil, err
     }
 
-    if err = receiveRes(&connection); nil != err {
+    if err = receiveRes(connection); nil != err {
         return nil, err
     }
 
@@ -25,7 +25,7 @@ func StartTunnel(serverHost string, serverPort int, ip string, port int) (net.Co
 }
 
 // sendTarget 发送target信息
-func sendTarget(connection *net.Conn, ip string, port int) error {
+func sendTarget(connection net.Conn, ip string, port int) error {
     dataLength := 1 + 2 + 1 + len(ip)
     data := make([]byte, dataLength)
     data[0] = VER01
@@ -47,9 +47,10 @@ func sendTarget(connection *net.Conn, ip string, port int) error {
         index++
     }
 
-    n, err := (*connection).Write(data)
+    fmt.Println("发送目标信息: ", data, " -> ", string(data))
+    n, err := connection.Write(data)
     if n != dataLength || nil != err {
-        (*connection).Close()
+        connection.Close()
         return errors.New("写入数据失败")
     }
 
@@ -57,27 +58,27 @@ func sendTarget(connection *net.Conn, ip string, port int) error {
 }
 
 // receiveRes 读取响应消息
-func receiveRes(connection *net.Conn) error {
+func receiveRes(connection net.Conn) error {
     ver := make([]byte, 1)
-    n, err := (*connection).Read(ver)
+    n, err := (connection).Read(ver)
     if n != 1 || nil != err {
         return errors.New("读取应答版本号失败")
     }
 
     code := make([]byte, 1)
-    n, err = (*connection).Read(code)
+    n, err = (connection).Read(code)
     if n != 1 || nil != err {
         return errors.New("读取响应码失败")
     }
 
     msgLen := make([]byte, 1)
-    n, err = (*connection).Read(msgLen)
+    n, err = (connection).Read(msgLen)
     if n != 1 || nil != err {
         return errors.New("读取消息长度失败")
     }
 
     msg := make([]byte, msgLen[0])
-    n, err = (*connection).Read(msg)
+    n, err = (connection).Read(msg)
     if n != int(msgLen[0]) || nil != err {
         return errors.New("读取消息失败")
     }

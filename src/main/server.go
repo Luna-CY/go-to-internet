@@ -21,7 +21,7 @@ func main() {
     flag.StringVar(&config.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
     flag.IntVar(&config.Port, "p", 443, "监听端口号")
 
-    flag.StringVar(&config.SSLCrtFile, "config", "", "SSL CRT文件路径")
+    flag.StringVar(&config.SSLCrtFile, "c", "", "SSL CRT文件路径")
     flag.StringVar(&config.SSLKeyFile, "k", "", "SSL KEY文件路径")
 
     flag.Usage = serverCommandUsage

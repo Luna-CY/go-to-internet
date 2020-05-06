@@ -46,14 +46,14 @@ func connection(ip string, port int) *net.Conn {
 
 // StartConnection 开始一个连接处理
 func StartConnection(src net.Conn, config *ServerConfig) {
-    if !tunnel.IsTunnelProtocol(&src) {
+    if !tunnel.IsTunnelProtocol(src) {
         ns := http.MockNginx{Conn: &src, Version: "1.14.2"}
         ns.P404()
 
         return
     }
 
-    ip, port, err := tunnel.ReceiveTarget(&src)
+    ip, port, err := tunnel.ReceiveTarget(src)
     if nil != err {
         fmt.Println(err)
 
