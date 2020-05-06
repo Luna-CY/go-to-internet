@@ -60,6 +60,6 @@ func tlsListen(config *proxy.ServerConfig) {
             continue
         }
 
-        go proxy.StartConnection(conn, config)
+        go proxy.StartConnection(conn)
     }
 }
