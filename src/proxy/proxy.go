@@ -4,15 +4,16 @@ import (
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/http"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
+    "io"
     "net"
 )
 
-var connections map[string]*net.Conn
+var connections map[string]net.Conn
 
 // init
 func init() {
     if nil == connections {
-        connections = make(map[string]*net.Conn)
+        connections = make(map[string]net.Conn)
     }
 }
 
@@ -21,16 +22,16 @@ func Close() {
     if nil != connections {
         for key := range connections {
             fmt.Println("关闭连接: ", key)
-            (*connections[key]).Close()
+            connections[key].Close()
         }
     }
 }
 
-func connection(ip string, port int) *net.Conn {
+func connection(ip string, port int) net.Conn {
     key := fmt.Sprintf("%v:%d", ip, port)
-    if conn, ok := connections[key]; ok {
-        return conn
-    }
+    //if conn, ok := connections[key]; ok {
+    //    return conn
+    //}
 
     fmt.Printf("创建到目标服务器连接: %v:%d\n", ip, port)
     connection, err := net.Dial("tcp", fmt.Sprintf("%v:%d", ip, port))
@@ -39,7 +40,7 @@ func connection(ip string, port int) *net.Conn {
 
         return nil
     }
-    connections[key] = &connection
+    connections[key] = connection
 
     return connections[key]
 }
@@ -62,9 +63,15 @@ func StartConnection(src net.Conn, config *ServerConfig) {
 
     fmt.Println("ip: ", ip, " -> ", port)
 
-    //dst := connection(ip, port)
-    //_, _ = io.Copy(*dst, src)
-    //_, _ = io.Copy(src, *dst)
+    dst := connection(ip, port)
+    defer dst.Close()
+
+    go func() {
+        defer src.Close()
+        _, _ = io.Copy(src, dst)
+
+    }()
+    _, _ = io.Copy(dst, src)
 }
 
 func CheckUser(username, password string) bool {

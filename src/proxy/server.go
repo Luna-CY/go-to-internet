@@ -62,7 +62,7 @@ func (s *Server) get() {
 }
 
 // connection 获取tcp连接句柄
-func (s *Server) connection(ip string, port int) *net.Conn {
+func (s *Server) connection(ip string, port int) net.Conn {
     key := fmt.Sprintf("%v:%d", ip, port)
     if conn, ok := connections[key]; ok {
         return conn
@@ -75,7 +75,7 @@ func (s *Server) connection(ip string, port int) *net.Conn {
 
         return nil
     }
-    connections[key] = &connection
+    connections[key] = connection
 
     return connections[key]
 }
@@ -96,7 +96,7 @@ func (s *Server) post() {
     }
 
     if conn := s.connection(httpRequest.TargetIp, httpRequest.TargetPort); nil != conn {
-        if _, err = (*conn).Write(httpRequest.Data); nil != err {
+        if _, err = conn.Write(httpRequest.Data); nil != err {
             fmt.Printf("向目标服务器发送数据失败: %v\n", err)
 
             return
@@ -110,7 +110,7 @@ func (s *Server) post() {
             var data []byte
             buffer := make([]byte, 256)
             for {
-                n, err := (*conn).Read(buffer)
+                n, err := conn.Read(buffer)
                 _, _ = s.writer.Write(buffer[:n])
                 data = append(data, buffer[:n]...)
                 flusher.Flush()

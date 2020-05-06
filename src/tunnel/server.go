@@ -14,26 +14,26 @@ func IsTunnelProtocol(conn net.Conn) bool {
 // ReceiveTarget 获取目标服务器信息
 func ReceiveTarget(conn net.Conn) (string, int, error) {
     ver := make([]byte, 1)
-    n, err := (conn).Read(ver)
+    n, err := conn.Read(ver)
     if n != 1 || nil != err {
         fmt.Println(ver)
         return "", 0, errors.New("读取版本号失败")
     }
 
     port := make([]byte, 2)
-    n, err = (conn).Read(port)
+    n, err = conn.Read(port)
     if n != 2 || nil != err {
         return "", 0, errors.New("读取端口号失败")
     }
 
     ipLen := make([]byte, 1)
-    n, err = (conn).Read(ipLen)
+    n, err = conn.Read(ipLen)
     if n != 1 || nil != err {
         return "", 0, errors.New("读取ip长度失败")
     }
 
     ip := make([]byte, ipLen[0])
-    n, err = (conn).Read(ip)
+    n, err = conn.Read(ip)
     if n != int(ipLen[0]) || nil != err {
         return "", 0, errors.New("读取ip失败")
     }
@@ -43,7 +43,7 @@ func ReceiveTarget(conn net.Conn) (string, int, error) {
         return "", 0, err
     }
 
-    return net.IP(ip[:n]).String(), int(port[0])<<8 | int(port[1]), nil
+    return string(ip), int(port[0])<<8 | int(port[1]), nil
 }
 
 // sendRes 发送响应数据
@@ -60,9 +60,9 @@ func sendRes(conn net.Conn) error {
         index++
     }
 
-    n, err := (conn).Write(data)
+    n, err := conn.Write(data)
     if n != dataLength || nil != err {
-        (conn).Close()
+        conn.Close()
         return errors.New("写入数据失败")
     }
 

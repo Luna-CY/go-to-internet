@@ -93,8 +93,12 @@ func (c *Socket) connection(src net.Conn) {
     }
     defer dst.Close()
 
+    go func () {
+        defer src.Close()
+        _, _ = io.Copy(src, dst)
+
+    }()
     _, _ = io.Copy(dst, src)
-    _, _ = io.Copy(src, dst)
 }
 
 // isSocks5 检查连接是否是socks5协议

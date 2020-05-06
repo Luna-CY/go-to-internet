@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+    "crypto/tls"
     "encoding/binary"
     "errors"
     "fmt"
@@ -8,7 +9,7 @@ import (
 )
 
 func StartTunnel(serverHost string, serverPort int, ip string, port int) (net.Conn, error) {
-    connection, err := net.Dial("tcp", fmt.Sprintf("%v:%d", serverHost, serverPort))
+    connection, err := tls.Dial("tcp", fmt.Sprintf("%v:%d", serverHost, serverPort), nil)
     if nil != err {
         return nil, err
     }
