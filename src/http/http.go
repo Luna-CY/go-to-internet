@@ -1,7 +1,6 @@
 package http
 
 import (
-    "compress/gzip"
     "fmt"
     "net"
     "net/http"
@@ -31,20 +30,20 @@ func (m *MockNginx) SendResponse() {
         m.header.Set("Date", fmt.Sprintf("%v GMT", time.Now().Add(duration).Format("Mon, 02 Jan 2006 15:04:05")))
     }
 
-    m.header.Set("Connection", "keep-alive")
-    m.header.Set("Content-Type", "application/json; charset=utf-8")
-    m.header.Set("Content-Encoding", "gzip")
+    m.header.Set("Connection", "close")
+    m.header.Set("Content-Type", "text/html")
 
-    gw := gzip.NewWriter(m.Conn)
-    defer gw.Close()
+    content := "<html>\r\n<head><title>%v</title></head>\r\n<body bgcolor=\"white\">\r\n<center><h1>%v</h1></center>\r\n<hr><center>%v</center>\r\n</body>\r\n</html>\r\n"
+    content = fmt.Sprintf(content, "400 Bad Request", "400 Bad Request", m.Server)
+    m.header.Set("Content-Length", fmt.Sprintf("%d", len(content)))
 
     // 响应头
-    _, _ = m.Conn.Write([]byte("HTTP/1.1 200 OK\r\n"))
+    _, _ = m.Conn.Write([]byte("HTTP/1.1 400 Bad Request\r\n"))
     for key, value := range m.header {
         _, _ = m.Conn.Write([]byte(fmt.Sprintf("%v: %v\r\n", key, value[0])))
     }
 
     // 响应数据
     _, _ = m.Conn.Write([]byte("\r\n"))
-    _, _ = gw.Write([]byte("{\"code\": 1, \"msg\": \"签名错误\"}"))
+    _, _ = m.Conn.Write([]byte(content))
 }
