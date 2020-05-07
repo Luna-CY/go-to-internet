@@ -8,7 +8,10 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/proxy"
     "os"
+    "os/user"
     "path"
+    "strconv"
+    "syscall"
 )
 
 // serverCommandUsage 打印控制台Usage信息
@@ -37,6 +40,9 @@ func main() {
     flag.StringVar(&config.SSLCerFile, "c", "", "SSL CER文件路径 (default \"${arg:acme}/${arg:H}/fullchain.cer\")")
     flag.StringVar(&config.SSLKeyFile, "k", "", "SSL KEY文件路径 (default \"${arg:acme}/${arg:H}/${arg:H}.key\")")
 
+    flag.StringVar(&config.User, "u", "", "设置运行时用户")
+    flag.StringVar(&config.Group, "g", "", "设置运行时用户组")
+
     flag.BoolVar(&config.Verbose, "v", false, "打印详细日志")
 
     flag.Usage = serverCommandUsage
@@ -48,7 +54,62 @@ func main() {
         os.Exit(0)
     }
 
+    if "" != config.User {
+        if err := switchToUser(config.User); nil != err {
+            logger.Errorf("切换用户失败: %v", err)
+
+            os.Exit(1)
+        }
+    }
+
+    if "" != config.Group {
+        if err := switchToGroup(config.Group); nil != err {
+            logger.Errorf("切换用户组失败: %v", err)
+
+            os.Exit(1)
+        }
+    }
+
     tlsListen(config)
+}
+
+// switchToUser 切换运行时用户
+func switchToUser(username string) error {
+    info, err := user.Lookup(username)
+    if nil != err {
+        return err
+    }
+
+    uid, err := strconv.Atoi(info.Uid)
+    if nil != err {
+        return err
+    }
+
+    if err := syscall.Setuid(uid); nil != err {
+        return err
+    }
+
+    gid, err := strconv.Atoi(info.Gid)
+    if nil != err {
+        return err
+    }
+
+    return syscall.Setgid(gid)
+}
+
+// switchToGroup 切换运行时用户组
+func switchToGroup(group string) error {
+    info, err := user.LookupGroup(group)
+    if nil != err {
+        return err
+    }
+
+    gid, err := strconv.Atoi(info.Gid)
+    if nil != err {
+        return err
+    }
+
+    return syscall.Setgid(gid)
 }
 
 // tlsListen 启动tls服务器
