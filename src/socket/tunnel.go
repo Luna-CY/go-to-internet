@@ -3,11 +3,10 @@ package socket
 import (
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
-    "net"
 )
 
 // startTunnel 启动一个隧道
-func (s *Socket) startTunnel(src net.Conn, ipType byte, ip string, port int, verbose bool) {
+func (s *Socket) startTunnel(ipType byte, ip string, port int, verbose bool) (*tunnel.Client, error) {
     config := &tunnel.Config{
         ServerHostname: s.Hostname,
         ServerPort:     s.Port,
@@ -19,16 +18,14 @@ func (s *Socket) startTunnel(src net.Conn, ipType byte, ip string, port int, ver
         Verbose:        verbose,
     }
 
-    dst, err := tunnel.NewClient(config)
+    client, err := tunnel.NewClient(config)
     if nil != err {
         if verbose {
             logger.Errorf("启动隧道失败: %v", err)
         }
 
-        return
+        return nil, err
     }
 
-    if err := dst.Bind(src); nil != err && verbose {
-        logger.Errorf("绑定隧道失败: %v", err)
-    }
+    return client, nil
 }

@@ -19,7 +19,7 @@ func init() {
 }
 
 // Error error级别的日志
-func Error(msg string) {
+func Error(msg interface{}) {
     printf(LevelError, fmt.Sprintf("%v\n", msg))
 }
 
@@ -29,7 +29,7 @@ func Errorf(format string, v ...interface{}) {
 }
 
 // Warn warn级别的日志
-func Warn(msg string) {
+func Warn(msg interface{}) {
     printf(LevelWarn, fmt.Sprintf("%v\n", msg))
 }
 
@@ -39,7 +39,7 @@ func Warnf(format string, v ...interface{}) {
 }
 
 // Info info级别的日志
-func Info(msg string) {
+func Info(msg interface{}) {
     printf(LevelInfo, fmt.Sprintf("%v\n", msg))
 }
 
@@ -49,7 +49,7 @@ func Infof(format string, v ...interface{}) {
 }
 
 // Debug debug级别的日志
-func Debug(msg string) {
+func Debug(msg interface{}) {
     printf(LevelDebug, fmt.Sprintf("%v\n", msg))
 }
 

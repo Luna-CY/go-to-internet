@@ -61,9 +61,19 @@ func (s *Socket) connection(src net.Conn) {
 
         return
     }
-    s.sendAck(src)
 
-    s.startTunnel(src, ipType, ip, port, s.Verbose)
+    client, err := s.startTunnel(ipType, ip, port, s.Verbose)
+    if nil != err {
+        defer src.Close()
+        s.sendAck(src, 0x01)
+
+        return
+    }
+    s.sendAck(src, 0x00)
+
+    if err := client.Bind(src); nil != err && s.Verbose {
+        logger.Errorf("绑定隧道失败: %v", err)
+    }
 }
 
 // isSocks5 检查连接是否是socks5协议
@@ -136,12 +146,12 @@ func (s *Socket) getRemoteAddr(conn net.Conn) (byte, string, int, error) {
 }
 
 // sendAck 发送socket确认信息
-func (s *Socket) sendAck(src net.Conn) {
+func (s *Socket) sendAck(src net.Conn, response byte) {
     ack := make([]byte, 4+1+len(s.Hostname)+2)
-    ack[0] = 0x05 // VER
-    ack[1] = 0x00 // REP
-    ack[2] = 0x00 // RSV
-    ack[3] = 0x03 // ATYP: 域名
+    ack[0] = 0x05     // VER
+    ack[1] = response // REP
+    ack[2] = 0x00     // RSV
+    ack[3] = 0x03     // ATYP: 域名
     ack[4] = byte(len(s.Hostname))
 
     index := 5

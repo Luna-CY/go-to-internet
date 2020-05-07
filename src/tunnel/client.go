@@ -18,6 +18,7 @@ func NewClient(config *Config) (*Client, error) {
 
     client := &Client{serverConn: conn, config: config}
     if err = client.connect(); nil != err {
+        defer conn.Close()
         return nil, err
     }
 

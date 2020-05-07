@@ -26,6 +26,7 @@
         <method importPath="net" receiver="Conn" name="Close" />
         <method importPath="net" receiver="*TCPConn" name="Close" />
         <method importPath="compress/gzip" receiver="*Writer" name="Close" />
+        <method importPath="crypto/tls" receiver="*Conn" name="Close" />
       </methods>
     </inspection_tool>
   </profile>

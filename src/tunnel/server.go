@@ -55,7 +55,7 @@ func (s *Server) Bind() error {
 
 // checkConnection 检查连接是否是私有协议
 func (s *Server) checkConnection() bool {
-    _, _, err := s.receiveUserInfo()
+    user, pass, err := s.receiveUserInfo()
     if nil != err {
         if s.verbose {
             logger.Debugf("解析协议失败: %v", err)
@@ -65,6 +65,9 @@ func (s *Server) checkConnection() bool {
     }
 
     // TODO: 检查用户信息是否有效
+    if "root" != user || "123456" != pass {
+        return false
+    }
 
     if err := s.parseTarget(); nil != err {
         if s.verbose {
