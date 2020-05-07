@@ -110,9 +110,6 @@ func (m *MockNginx) setHeaders() {
     }
 
     m.header.Set("Server", m.Server)
-    m.header.Set("Date", time.Now().Format(time.RFC1123))
-    if duration, err := time.ParseDuration("-8h"); nil == err {
-        m.header.Set("Date", fmt.Sprintf("%v GMT", time.Now().Add(duration).Format("Mon, 02 Jan 2006 15:04:05")))
-    }
+    m.header.Set("Date", fmt.Sprintf("%v GMT", time.Now().Format("Mon, 02 Jan 2006 15:04:05")))
     m.header.Set("Connection", "close")
 }
