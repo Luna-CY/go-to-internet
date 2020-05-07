@@ -3,6 +3,7 @@ package tunnel
 import (
     "errors"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/logger"
     "io"
     "net"
 )
@@ -49,16 +50,22 @@ func (s *Server) Bind() error {
 func (s *Server) checkConnection() bool {
     _, _, err := s.receiveUserInfo()
     if nil != err {
+        logger.Debugf("解析协议失败: %v", err)
+
         return false
     }
 
     // TODO: 检查用户信息是否有效
 
     if err := s.parseTarget(); nil != err {
+        logger.Errorf("解析目标数据失败: %v", err)
+
         return false
     }
 
     if err := s.sendRes(); nil != err {
+        logger.Error("发送协议响应数据失败")
+
         return false
     }
 
@@ -70,41 +77,34 @@ func (s *Server) receiveUserInfo() (string, string, error) {
     ver := make([]byte, 1)
     n, err := s.clientConn.Read(ver)
     if n != 1 || nil != err {
-        fmt.Println(err)
-        fmt.Println("读取版本号失败")
         return "", "", errors.New("读取版本号失败")
     }
 
     if VER01 != ver[0] {
-        fmt.Println("不支持的协议版本")
         return "", "", errors.New("不支持的协议版本")
     }
 
     uLen := make([]byte, 1)
     n, err = s.clientConn.Read(uLen)
     if n != 1 || nil != err {
-        fmt.Println("读取用户名称长度失败")
         return "", "", errors.New("读取用户名称长度失败")
     }
 
     user := make([]byte, uLen[0])
     n, err = s.clientConn.Read(user)
     if n != int(uLen[0]) || nil != err {
-        fmt.Println("读取用户名称失败")
         return "", "", errors.New("读取用户名称失败")
     }
 
     pLen := make([]byte, 1)
     n, err = s.clientConn.Read(pLen)
     if n != 1 || nil != err {
-        fmt.Println("读取用户密码长度失败")
         return "", "", errors.New("读取用户密码长度失败")
     }
 
     pass := make([]byte, pLen[0])
     n, err = s.clientConn.Read(pass)
     if n != int(pLen[0]) || nil != err {
-        fmt.Println("读取用户密码失败")
         return "", "", errors.New("读取用户密码失败")
     }
 
@@ -116,7 +116,6 @@ func (s *Server) parseTarget() error {
     port := make([]byte, 2)
     n, err := s.clientConn.Read(port)
     if n != 2 || nil != err {
-        fmt.Println("解析端口失败")
         return errors.New("解析端口失败")
     }
     s.dstPort = int(port[0])<<8 | int(port[1])
@@ -124,21 +123,18 @@ func (s *Server) parseTarget() error {
     ipType := make([]byte, 1)
     n, err = s.clientConn.Read(ipType)
     if n != 1 || nil != err {
-        fmt.Println("解析ip类型失败")
         return errors.New("解析ip类型失败")
     }
 
     ipLen := make([]byte, 1)
     n, err = s.clientConn.Read(ipLen)
     if n != 1 || nil != err {
-        fmt.Println("解析ip长度失败")
         return errors.New("解析ip长度失败")
     }
 
     ip := make([]byte, ipLen[0])
     n, err = s.clientConn.Read(ip)
     if n != int(ipLen[0]) || nil != err {
-        fmt.Println("解析ip失败")
         return errors.New("解析ip失败")
     }
 
@@ -173,6 +169,7 @@ func (s *Server) sendRes() error {
     n, err := s.clientConn.Write(data)
     if n != dataLength || nil != err {
         s.clientConn.Close()
+
         return errors.New("写入数据失败")
     }
 

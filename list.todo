@@ -1,0 +1,7 @@
+TODO: 支持详细日志打印
+
+TODO: 切换运行时用户
+以root用户运行的需要切换到nobody或daemon用户
+
+TODO: 支持sqlite数据库，提供一个操作数据的命令
+db文件存放在/etc/go-to-internet文件夹下

@@ -1,7 +1,7 @@
 package socket
 
 import (
-    "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "net"
 )
@@ -20,7 +20,7 @@ func (s *Socket) startTunnel(src net.Conn, ipType byte, ip string, port int) {
 
     dst, err := tunnel.NewClient(config)
     if nil != err {
-        fmt.Println("启动隧道失败: ", err)
+        logger.Errorf("启动隧道失败: %v", err)
 
         return
     }

@@ -24,6 +24,8 @@ func main() {
     flag.StringVar(&config.SSLCrtFile, "c", "", "SSL CRT文件路径")
     flag.StringVar(&config.SSLKeyFile, "k", "", "SSL KEY文件路径")
 
+    flag.BoolVar(&config.Verbose, "v", false, "打印详细日志")
+
     flag.Usage = serverCommandUsage
     flag.Parse()
 

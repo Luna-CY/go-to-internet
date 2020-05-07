@@ -4,7 +4,7 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
-    "log"
+    "gitee.com/Luna-CY/go-to-internet/src/logger"
     "net"
 )
 
@@ -23,11 +23,13 @@ type Socket struct {
 
 // Start 启动本地服务监听
 func (s *Socket) Start() {
-    fmt.Printf("启动监听 %v:%d ...\n", s.LocalAddr, s.LocalPort)
+    logger.Infof("启动监听 %v:%d ...\n", s.LocalAddr, s.LocalPort)
 
     listen, err := net.Listen("tcp", fmt.Sprintf("%v:%d", s.LocalAddr, s.LocalPort))
     if nil != err {
-        log.Fatal(fmt.Sprintf("监听地址 %v:%d 失败", s.LocalAddr, s.LocalPort))
+        logger.Errorf("监听地址 %v:%d 失败", s.LocalAddr, s.LocalPort)
+
+        return
     }
     defer listen.Close()
 

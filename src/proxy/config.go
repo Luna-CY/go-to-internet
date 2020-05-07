@@ -7,4 +7,6 @@ type ServerConfig struct {
 
     SSLCrtFile string // ssl crt路径
     SSLKeyFile string // ssl key路径
+
+    Verbose bool // 详细模式
 }
