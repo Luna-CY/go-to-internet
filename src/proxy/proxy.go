@@ -1,7 +1,7 @@
 package proxy
 
 import (
-    "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/http"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "net"
@@ -15,9 +15,8 @@ func StartConnection(src net.Conn, verbose bool) {
             logger.Debugf("创建隧道服务端失败: %v", err)
         }
 
-        //ns := http.MockNginx{Conn: &src, Version: "1.14.2"}
-        //ns.P404()
-        fmt.Println(err)
+        ns := http.MockNginx{Conn: src, Server: "nginx"}
+        ns.SendResponse()
 
         return
     }
