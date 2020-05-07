@@ -9,6 +9,8 @@ import (
     "time"
 )
 
+var startTimestamp time.Time = time.Now()
+
 // MockNginx MockNginx结构体
 type MockNginx struct {
     Conn     net.Conn

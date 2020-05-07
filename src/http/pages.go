@@ -3,6 +3,7 @@ package http
 import (
     "compress/gzip"
     "fmt"
+    "time"
 )
 
 // p400 400 page
@@ -31,6 +32,11 @@ func (m *MockNginx) pi() {
     m.header.Set("Content-Type", "text/html")
     m.header.Set("Content-Encoding", "gzip")
 
+    m.header.Set("Last-Modified", startTimestamp.Format(time.RFC1123))
+    if duration, err := time.ParseDuration("-8h"); nil == err {
+        m.header.Set("Last-Modified", fmt.Sprintf("%v GMT", startTimestamp.Add(duration).Format("Mon, 02 Jan 2006 15:04:05")))
+    }
+
     content := "<!DOCTYPE html>\n" +
         "<html>\n" +
         "<head>\n" +
@@ -45,6 +51,7 @@ func (m *MockNginx) pi() {
         "</body>\n" +
         "</html>\n"
     m.header.Set("Content-Length", fmt.Sprintf("%d", len(content)))
+    m.header.Set("ETag", fmt.Sprintf("W/\"%x-%x\"", startTimestamp.Unix(), len(content)))
 
     // 响应头
     _, _ = m.Conn.Write([]byte("HTTP/1.1 200 OK\r\n"))
