@@ -63,7 +63,7 @@ func (s *Socket) connection(src net.Conn) {
     }
     s.sendAck(src)
 
-    s.startTunnel(src, ipType, ip, port)
+    s.startTunnel(src, ipType, ip, port, s.Verbose)
 }
 
 // isSocks5 检查连接是否是socks5协议

@@ -10,4 +10,6 @@ type Config struct {
     TargetType     byte   // 目标类型
     TargetHostOrIp string // 目标host或ip
     TargetPort     int    // 目标端口号
+
+    Verbose bool // 详细模式
 }

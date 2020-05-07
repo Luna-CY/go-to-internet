@@ -4,6 +4,7 @@ import (
     "crypto/tls"
     "flag"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/proxy"
     "os"
 )
@@ -42,19 +43,19 @@ func main() {
 func tlsListen(config *proxy.ServerConfig) {
     cert, err := tls.LoadX509KeyPair(config.SSLCrtFile, config.SSLKeyFile)
     if nil != err {
-        fmt.Println("加载TLS证书失败: ", err)
+        logger.Errorf("加载TLS证书失败: %v", err)
 
         return
     }
-    conf := &tls.Config{Certificates: []tls.Certificate{cert}}
-    ln, err := tls.Listen("tcp", fmt.Sprintf(":%d", config.Port), conf)
+    tlsConfig := &tls.Config{Certificates: []tls.Certificate{cert}}
+    ln, err := tls.Listen("tcp", fmt.Sprintf(":%d", config.Port), tlsConfig)
     if nil != err {
-        fmt.Println("启动服务器失败: ", err)
+        logger.Errorf("启动服务器失败: %v", err)
 
         return
     }
     defer ln.Close()
-    fmt.Printf("启动监听 %v:%d ...\n", config.Hostname, config.Port)
+    logger.Infof("启动监听 %v:%d ...\n", config.Hostname, config.Port)
 
     for {
         conn, err := ln.Accept()
@@ -62,6 +63,6 @@ func tlsListen(config *proxy.ServerConfig) {
             continue
         }
 
-        go proxy.StartConnection(conn)
+        go proxy.StartConnection(conn, config.Verbose)
     }
 }

@@ -9,8 +9,8 @@ import (
 )
 
 // NewServer 新建一个隧道的服务端
-func NewServer(src net.Conn) (*Server, error) {
-    server := &Server{clientConn: src}
+func NewServer(src net.Conn, verbose bool) (*Server, error) {
+    server := &Server{clientConn: src, verbose: verbose}
     if !server.checkConnection() {
         return nil, errors.New("验证连接失败")
     }
@@ -24,11 +24,13 @@ type Server struct {
 
     dstIp   string
     dstPort int
+
+    verbose bool
 }
 
 // Bind 双向绑定客户端以及目标服务器
 func (s *Server) Bind() error {
-    fmt.Printf("建立请求 -> %v:%d\n", s.dstIp, s.dstPort)
+    logger.Infof("建立连接请求 -> %v:%d\n", s.dstIp, s.dstPort)
 
     dst, err := net.Dial("tcp", fmt.Sprintf("%v:%d", s.dstIp, s.dstPort))
     if nil != err {
@@ -38,10 +40,15 @@ func (s *Server) Bind() error {
 
     go func() {
         defer s.clientConn.Close()
-        _, _ = io.Copy(s.clientConn, dst)
+        if _, err := io.Copy(s.clientConn, dst); nil != err && io.EOF != err && s.verbose {
+            logger.Errorf("目标服务器 -> 隧道客户端: %v", err)
+        }
 
     }()
-    _, _ = io.Copy(dst, s.clientConn)
+
+    if _, err := io.Copy(dst, s.clientConn); nil != err && io.EOF != err && s.verbose {
+        logger.Errorf("隧道客户端 -> 目标服务器: %v", err)
+    }
 
     return nil
 }
@@ -50,7 +57,9 @@ func (s *Server) Bind() error {
 func (s *Server) checkConnection() bool {
     _, _, err := s.receiveUserInfo()
     if nil != err {
-        logger.Debugf("解析协议失败: %v", err)
+        if s.verbose {
+            logger.Debugf("解析协议失败: %v", err)
+        }
 
         return false
     }
@@ -58,13 +67,17 @@ func (s *Server) checkConnection() bool {
     // TODO: 检查用户信息是否有效
 
     if err := s.parseTarget(); nil != err {
-        logger.Errorf("解析目标数据失败: %v", err)
+        if s.verbose {
+            logger.Errorf("解析目标数据失败: %v", err)
+        }
 
         return false
     }
 
     if err := s.sendRes(); nil != err {
-        logger.Error("发送协议响应数据失败")
+        if s.verbose {
+            logger.Error("发送协议响应数据失败")
+        }
 
         return false
     }
