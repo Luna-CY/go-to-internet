@@ -9,7 +9,7 @@ import (
 
 // serverCommandUsage 打印控制台Usage信息
 func clientCommandUsage() {
-    _, _ = fmt.Fprintln(flag.CommandLine.Output(), "client -H Hostname -u USERNAME -P PASSWORD [options]")
+    _, _ = fmt.Fprintln(flag.CommandLine.Output(), "cli-go-to-net -H Hostname -u USERNAME -P PASSWORD [options]")
 
     flag.PrintDefaults()
 }
