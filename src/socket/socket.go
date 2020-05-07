@@ -15,8 +15,10 @@ type Socket struct {
     LocalAddr string // 本地监听地址
     LocalPort int    // 本地监听端口
 
-    Username  string // 身份认证用户名
-    Password  string // 身份认证密码
+    Username string // 身份认证用户名
+    Password string // 身份认证密码
+
+    Verbose bool // 详细模式
 }
 
 // Start 启动本地服务监听
@@ -32,7 +34,7 @@ func (s *Socket) Start() {
     for {
         conn, err := listen.Accept()
         if nil != err {
-            log.Fatal("接收请求失败")
+            continue
         }
 
         go s.connection(conn)

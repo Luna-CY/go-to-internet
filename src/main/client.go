@@ -9,7 +9,7 @@ import (
 
 // serverCommandUsage 打印控制台Usage信息
 func clientCommandUsage() {
-    _, _ = fmt.Fprintln(flag.CommandLine.Output(), "client -H Hostname [-auth -u USERNAME -P PASSWORD] [options]")
+    _, _ = fmt.Fprintln(flag.CommandLine.Output(), "client -H Hostname -u USERNAME -P PASSWORD [options]")
 
     flag.PrintDefaults()
 }
@@ -24,6 +24,8 @@ func main() {
 
     flag.StringVar(&server.Username, "u", "", "服务端身份认证用户名")
     flag.StringVar(&server.Password, "P", "", "服务端身份认证密码")
+
+    flag.BoolVar(&server.Verbose, "v", false, "打印详细日志")
 
     flag.Usage = clientCommandUsage
     flag.Parse()
