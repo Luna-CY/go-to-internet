@@ -97,7 +97,7 @@ func getTlsConfig(config *proxy.ServerConfig) (*tls.Config, error) {
         key = path.Join(config.Acme, config.Hostname, fmt.Sprintf("%v.key", config.Hostname))
     }
 
-    certificate, err := tls.LoadX509KeyPair(config.SSLCerFile, config.SSLKeyFile)
+    certificate, err := tls.LoadX509KeyPair(cert, key)
     if nil != err {
         return nil, err
     }

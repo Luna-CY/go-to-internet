@@ -43,7 +43,7 @@ func (m *MockNginx) pi() {
         "<p>For online documentation and support please refer to\n<a href=\"http://nginx.org/\">nginx.org</a>.<br/>\nCommercial support is available at\n<a href=\"http://nginx.com/\">nginx.com</a>.</p>\n\n" +
         "<p><em>Thank you for using nginx.</em></p>\n" +
         "</body>\n" +
-        "</html>"
+        "</html>\n"
     m.header.Set("Content-Length", fmt.Sprintf("%d", len(content)))
 
     // 响应头
