@@ -1,16 +1,19 @@
 package http
 
 import (
+    "bufio"
     "fmt"
     "net"
     "net/http"
+    "strings"
     "time"
 )
 
 // MockNginx MockNginx结构体
 type MockNginx struct {
-    Conn   net.Conn
-    Server string
+    Conn     net.Conn
+    Server   string
+    BindHost string
 
     header http.Header
 }
@@ -19,31 +22,95 @@ type MockNginx struct {
 func (m *MockNginx) SendResponse() {
     defer m.Conn.Close()
 
+    reader := bufio.NewReader(m.Conn)
+    line, _, err := reader.ReadLine()
+    if nil != err {
+        m.p400()
+
+        return
+    }
+
+    tokens := strings.Split(string(line), " ")
+
+    if !m.isHttp(tokens[0]) {
+        m.p400()
+
+        return
+    }
+
+    if "HTTP/1.1" != tokens[2] && "HTTP/2" != tokens[2] {
+        m.p400()
+
+        return
+    }
+
+    if m.isListenHost(reader) {
+        m.p400()
+
+        return
+    }
+
+    m.pi()
+}
+
+// isHttp 检查请求是否是http协议
+func (m *MockNginx) isHttp(method string) bool {
+    switch method {
+    case "ET":
+        // GET
+        return true
+    case "UT":
+        // PUT
+        return true
+    case "OST":
+        // POST
+        return true
+    case "ELETE":
+        // DELETE
+        return true
+    case "ATCH":
+        // PATCH
+        return true
+    case "EAD":
+        // HEAD
+        return true
+    case "ONNECT":
+        // CONNECT
+        return true
+    default:
+        return false
+    }
+}
+
+// isListenHost 检查请求的Host是否是监听的Host
+func (m *MockNginx) isListenHost(reader *bufio.Reader) bool {
+    for {
+        line, _, err := reader.ReadLine()
+        if nil != err || "" == strings.Trim(string(line), "\r\n") {
+            return false
+        }
+
+        tokens := strings.Split(string(line), ":")
+        if 2 > len(tokens) {
+            continue
+        }
+
+        if "Host" == tokens[0] {
+            return m.BindHost == strings.Trim(tokens[1], " ")
+        }
+    }
+}
+
+// setHeaders 设置公共响应头
+func (m *MockNginx) setHeaders() {
     if nil == m.header {
         m.header = http.Header{}
     }
 
     m.header.Set("Server", m.Server)
     m.header.Set("Date", time.Now().Format(time.RFC1123))
-
     if duration, err := time.ParseDuration("-8h"); nil == err {
         m.header.Set("Date", fmt.Sprintf("%v GMT", time.Now().Add(duration).Format("Mon, 02 Jan 2006 15:04:05")))
     }
-
     m.header.Set("Connection", "close")
-    m.header.Set("Content-Type", "text/html")
-
-    content := "<html>\r\n<head><title>%v</title></head>\r\n<body bgcolor=\"white\">\r\n<center><h1>%v</h1></center>\r\n<hr><center>%v</center>\r\n</body>\r\n</html>\r\n"
-    content = fmt.Sprintf(content, "400 Bad Request", "400 Bad Request", m.Server)
-    m.header.Set("Content-Length", fmt.Sprintf("%d", len(content)))
-
-    // 响应头
-    _, _ = m.Conn.Write([]byte("HTTP/1.1 400 Bad Request\r\n"))
-    for key, value := range m.header {
-        _, _ = m.Conn.Write([]byte(fmt.Sprintf("%v: %v\r\n", key, value[0])))
-    }
-
-    // 响应数据
-    _, _ = m.Conn.Write([]byte("\r\n"))
-    _, _ = m.Conn.Write([]byte(content))
 }

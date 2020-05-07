@@ -8,14 +8,14 @@ import (
 )
 
 // StartConnection 开始一个连接处理
-func StartConnection(src net.Conn, verbose bool) {
+func StartConnection(src net.Conn, hostname string, verbose bool) {
     server, err := tunnel.NewServer(src, verbose)
     if nil != err {
         if verbose {
             logger.Debugf("创建隧道服务端失败: %v", err)
         }
 
-        ns := http.MockNginx{Conn: src, Server: "nginx"}
+        ns := http.MockNginx{Conn: src, Server: "nginx", BindHost: hostname}
         ns.SendResponse()
 
         return

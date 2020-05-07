@@ -1,11 +1,12 @@
 TODO: 切换运行时用户
-以root用户运行的需要切换到nobody或daemon用户
+WAIT 允许指定运行时的用户
 
 TODO: 支持sqlite数据库，提供一个操作数据的命令
-db文件存放在/etc/go-to-internet文件夹下
+WAIT db文件存放在/etc/go-to-internet文件夹下
 
 TODO: 注册信号处理器
+WAIT
 
 TODO: 伪装nginx服务器
-检查所有http请求，header头中的Host不为监听域名的，应该返回nginx默认页
-Host为监听域名的，返回400错误页
+OK 检查所有http请求，header头中的Host不为监听域名的，应该返回nginx默认页
+OK Host为监听域名的，返回400错误页
