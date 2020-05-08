@@ -3,6 +3,7 @@ package user
 import (
     "flag"
     "fmt"
+    "time"
 )
 
 // Config 用户配置结构
@@ -28,9 +29,7 @@ func (c *Config) Usage() {
     _, _ = fmt.Fprintln(c.Cmd.Output(), "")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "usage:")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net user -list")
-    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net user -add -u test -p password")
-    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net user -add -u test -p password -e 2020-05-08 23:00:00")
-    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net user -add -u test -p password -e 2020-05-08 23:00:00 -r 1024 * 1024 * 10")
+    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net user -add -u test -p password -e - -r 0")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net user -upd -u test -p new-password")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net user -del -u test")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "")
@@ -41,5 +40,40 @@ func (c *Config) Usage() {
 
 // Validate 检查配置参数是否有效
 func (c *Config) Validate() bool {
-    return true
+    if "" == c.Config {
+        return false
+    }
+
+    switch {
+    case c.List:
+        return true
+    case c.Add:
+        if "" == c.Username || "" == c.Password || "" == c.Expired || -1 == c.MaxRate {
+            return false
+        }
+
+        if "-" != c.Expired {
+            if _, err := time.Parse("2006-01-02T15:04:05", c.Expired); nil != err {
+                return false
+            }
+        }
+
+        return true
+    case c.Upd:
+        if "" == c.Username || ("" == c.Password && "" == c.Expired && -1 == c.MaxRate) {
+            return false
+        }
+
+        if "-" != c.Expired {
+            if _, err := time.Parse("2006-01-02T15:04:05", c.Expired); nil != err {
+                return false
+            }
+        }
+
+        return true
+    case c.Del:
+        return "" != c.Username
+    default:
+        return false
+    }
 }

@@ -23,8 +23,8 @@ func main() {
     userCmd.StringVar(&userConfig.Config, "c", "/etc/go-to-net/users.json", "配置文件位置")
     userCmd.StringVar(&userConfig.Username, "u", "", "用户名，用户的唯一标识")
     userCmd.StringVar(&userConfig.Password, "p", "", "用户密码")
-    userCmd.StringVar(&userConfig.Expired, "e", "-", "用户过期时间，单短横线代表不过期")
-    userCmd.Int64Var(&userConfig.MaxRate, "r", 0, "用户最大速率，0代表不限速，单位为kb (default 0)")
+    userCmd.StringVar(&userConfig.Expired, "e", "", "用户过期时间，单短横线代表不过期，格式: 2006-01-02T15:04:05")
+    userCmd.Int64Var(&userConfig.MaxRate, "r", -1, "用户最大速率，0代表不限速，单位为kb")
 
     if len(os.Args) < 2 {
         logger.Error("必须提供子命令，可用子命令请查看帮助信息")
@@ -46,7 +46,7 @@ func main() {
             os.Exit(0)
         }
 
-        if err := user.Exec(); nil != err {
+        if err := user.Exec(userConfig); nil != err {
             logger.Errorf("处理操作失败: %v", err)
         }
     default:
