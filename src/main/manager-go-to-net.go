@@ -2,6 +2,7 @@ package main
 
 import (
     "flag"
+    "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/command/user"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "os"
@@ -24,10 +25,13 @@ func main() {
     userCmd.StringVar(&userConfig.Username, "u", "", "用户名，用户的唯一标识")
     userCmd.StringVar(&userConfig.Password, "p", "", "用户密码")
     userCmd.StringVar(&userConfig.Expired, "e", "", "用户过期时间，单短横线代表不过期，格式: 2006-01-02T15:04:05")
-    userCmd.Int64Var(&userConfig.MaxRate, "r", -1, "用户最大速率，0代表不限速，单位为kb")
+    userCmd.IntVar(&userConfig.MaxRate, "r", -1, "用户最大速率，0代表不限速，单位为KB")
 
-    if len(os.Args) < 2 {
-        logger.Error("必须提供子命令，可用子命令请查看帮助信息")
+    if len(os.Args) < 2 || "-h" == os.Args[1] || "--help" == os.Args[1] {
+        _, _ = fmt.Fprintln(flag.CommandLine.Output(), "manager-go-to-net subcommand options")
+        _, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
+        _, _ = fmt.Fprintln(flag.CommandLine.Output(), "sub commands:")
+        _, _ = fmt.Fprintln(flag.CommandLine.Output(), "    user: 用户管理命令")
 
         os.Exit(0)
     }

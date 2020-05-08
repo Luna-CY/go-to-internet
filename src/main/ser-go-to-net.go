@@ -2,11 +2,14 @@ package main
 
 import (
     "crypto/tls"
+    "encoding/json"
     "errors"
     "flag"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/config"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/proxy"
+    "io/ioutil"
     "os"
     "os/user"
     "path"
@@ -31,7 +34,7 @@ func serverCommandUsage() {
 }
 
 func main() {
-    config := &proxy.ServerConfig{}
+    config := &proxy.Config{}
 
     flag.StringVar(&config.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
     flag.IntVar(&config.Port, "p", 443, "监听端口号")
@@ -43,12 +46,14 @@ func main() {
     flag.StringVar(&config.User, "u", "", "设置运行时用户")
     flag.StringVar(&config.Group, "g", "", "设置运行时用户组")
 
+    flag.StringVar(&config.UserConfig, "uc", "/etc/go-to-net/users.json", "用户配置文件，可以通过manager-go-to-net命令生成")
+
     flag.BoolVar(&config.Verbose, "v", false, "打印详细日志")
 
     flag.Usage = serverCommandUsage
     flag.Parse()
 
-    if "" == config.Hostname || ("" == config.Acme && ("" == config.SSLCerFile || "" == config.SSLKeyFile)) {
+    if "" == config.Hostname || "" == config.UserConfig || ("" == config.Acme && ("" == config.SSLCerFile || "" == config.SSLKeyFile)) {
         flag.Usage()
 
         os.Exit(0)
@@ -113,7 +118,14 @@ func switchToGroup(group string) error {
 }
 
 // tlsListen 启动tls服务器
-func tlsListen(config *proxy.ServerConfig) {
+func tlsListen(config *proxy.Config) {
+    userConfig, err := loadUserConfig(config.UserConfig)
+    if nil != err {
+        logger.Error(err)
+
+        return
+    }
+
     tlsConfig, err := getTlsConfig(config)
     if nil != err {
         logger.Errorf("加载TLS证书失败: %v", err)
@@ -136,12 +148,12 @@ func tlsListen(config *proxy.ServerConfig) {
             continue
         }
 
-        go proxy.StartConnection(conn, config.Hostname, config.Verbose)
+        go proxy.StartConnection(conn, config, userConfig)
     }
 }
 
 // getTlsConfig 获取TSL配置结构
-func getTlsConfig(config *proxy.ServerConfig) (*tls.Config, error) {
+func getTlsConfig(config *proxy.Config) (*tls.Config, error) {
     cert, key := config.SSLCerFile, config.SSLKeyFile
 
     if "" == cert || "" == key {
@@ -164,4 +176,25 @@ func getTlsConfig(config *proxy.ServerConfig) (*tls.Config, error) {
     }
 
     return &tls.Config{Certificates: []tls.Certificate{certificate}}, nil
+}
+
+// loadUserConfig 加载用户配置
+func loadUserConfig(c string) (*config.UserConfig, error) {
+    file, err := os.Open(c)
+    if nil != err {
+        return nil, errors.New(fmt.Sprintf("无法打开配置文件: %v", err))
+    }
+    defer file.Close()
+
+    data, err := ioutil.ReadAll(file)
+    if nil != err {
+        return nil, errors.New(fmt.Sprintf("无法读取配置文件: %v", err))
+    }
+
+    userConfig := &config.UserConfig{}
+    if err := json.Unmarshal(data, userConfig); nil != err {
+        return nil, errors.New(fmt.Sprintf("解析配置文件失败: %v", err))
+    }
+
+    return userConfig, nil
 }

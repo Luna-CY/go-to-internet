@@ -4,12 +4,9 @@ OK 允许指定运行时的用户
 TODO: 支持sqlite数据库，提供一个操作数据的命令
 OK db文件存放在/etc/go-to-internet文件夹下
 
-TODO: 注册信号处理器
-WAIT
-
 TODO: 伪装nginx服务器
 OK 检查所有http请求，header头中的Host不为监听域名的，应该返回nginx默认页
 OK Host为监听域名的，返回400错误页
 
 TODO: 支持账户限速
-WAIT 服务端限速
+OK 服务端限速

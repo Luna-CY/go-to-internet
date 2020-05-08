@@ -20,7 +20,7 @@ type Config struct {
     Username string // 用户名
     Password string // 密码
     Expired  string // 有效期，格式: yyyy-MM-dd HH:mm:ss
-    MaxRate  int64  // 最大速率，单位kb，格式: 1024 * 1024
+    MaxRate  int    // 最大速率，单位KB
 }
 
 // Usage 帮助信息
@@ -64,7 +64,7 @@ func (c *Config) Validate() bool {
             return false
         }
 
-        if "-" != c.Expired {
+        if "" != c.Expired && "-" != c.Expired {
             if _, err := time.Parse("2006-01-02T15:04:05", c.Expired); nil != err {
                 return false
             }

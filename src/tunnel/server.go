@@ -3,14 +3,18 @@ package tunnel
 import (
     "errors"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/config"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
+    "gitee.com/Luna-CY/go-to-internet/src/utils"
+    "golang.org/x/crypto/bcrypt"
+    "golang.org/x/time/rate"
     "io"
     "net"
 )
 
 // NewServer 新建一个隧道的服务端
-func NewServer(src net.Conn, verbose bool) (*Server, error) {
-    server := &Server{clientConn: src, verbose: verbose}
+func NewServer(src net.Conn, userConfig *config.UserConfig, verbose bool) (*Server, error) {
+    server := &Server{clientConn: src, userConfig: userConfig, verbose: verbose}
     if !server.checkConnection() {
         return nil, errors.New("验证连接失败")
     }
@@ -25,6 +29,9 @@ type Server struct {
     dstIp   string
     dstPort int
 
+    userConfig *config.UserConfig
+    userInfo   *config.UserInfo
+
     verbose bool
 }
 
@@ -38,15 +45,20 @@ func (s *Server) Bind() error {
     }
     defer dst.Close()
 
+    var limiter *rate.Limiter
+    if 0 != s.userInfo.MaxRate {
+        // TODO: 这个速率限制不太精准，需要优化
+        limiter = rate.NewLimiter(rate.Limit(s.userInfo.MaxRate*1024*2), s.userInfo.MaxRate*1024)
+    }
+
     go func() {
         defer s.clientConn.Close()
-        if _, err := io.Copy(s.clientConn, dst); nil != err && io.EOF != err && s.verbose {
+        if _, err := utils.Copy(s.clientConn, dst, limiter); nil != err && io.EOF != err && s.verbose {
             logger.Errorf("目标服务器 -> 隧道客户端: %v", err)
         }
-
     }()
 
-    if _, err := io.Copy(dst, s.clientConn); nil != err && io.EOF != err && s.verbose {
+    if _, err := utils.Copy(dst, s.clientConn, limiter); nil != err && io.EOF != err && s.verbose {
         logger.Errorf("隧道客户端 -> 目标服务器: %v", err)
     }
 
@@ -64,10 +76,16 @@ func (s *Server) checkConnection() bool {
         return false
     }
 
-    // TODO: 检查用户信息是否有效
-    if "root" != user || "123456" != pass {
+    userInfo, ok := s.userConfig.Users[user]
+    if !ok {
         return false
     }
+
+    err = bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(pass))
+    if nil != err {
+        return false
+    }
+    s.userInfo = userInfo
 
     if err := s.parseTarget(); nil != err {
         if s.verbose {
