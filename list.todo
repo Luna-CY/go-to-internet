@@ -2,7 +2,7 @@ TODO: 切换运行时用户
 OK 允许指定运行时的用户
 
 TODO: 支持sqlite数据库，提供一个操作数据的命令
-WAIT db文件存放在/etc/go-to-internet文件夹下
+OK db文件存放在/etc/go-to-internet文件夹下
 
 TODO: 注册信号处理器
 WAIT

@@ -5,6 +5,7 @@ import (
     "errors"
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/config"
+    "golang.org/x/crypto/bcrypt"
     "io/ioutil"
     "os"
     "path"
@@ -109,7 +110,7 @@ func (u *userCmd) exec() error {
 
         password, err := u.password(u.cmdInputConfig.Password)
         if nil != err {
-            return errors.New("加密密码失败")
+            return err
         }
 
         userInfo := &config.UserInfo{Password: password, Expired: u.cmdInputConfig.Expired, MaxRate: u.cmdInputConfig.MaxRate}
@@ -158,8 +159,12 @@ func (u *userCmd) exec() error {
 
 // password 加密密码
 func (u *userCmd) password(password string) (string, error) {
-    // TODO: 密码加密
-    return password, nil
+    data, err := bcrypt.GenerateFromPassword([]byte(password), 4)
+    if nil != err {
+        return "", errors.New(fmt.Sprintf("生成密码失败: %v", err))
+    }
+
+    return string(data), nil
 }
 
 // save 保存到文件
