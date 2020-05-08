@@ -10,3 +10,6 @@ WAIT
 TODO: 伪装nginx服务器
 OK 检查所有http请求，header头中的Host不为监听域名的，应该返回nginx默认页
 OK Host为监听域名的，返回400错误页
+
+TODO: 支持账户限速
+WAIT 服务端限速
