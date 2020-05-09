@@ -12,13 +12,4 @@
 *.out
 
 # Custom
-client
-cli-go-to-net
-client-*
-cli-go-to-net-*
-server
-ser-go-to-net
-server-*
-ser-go-to-net-*
-
-bin/*
+*-go-to-net
