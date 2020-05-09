@@ -47,8 +47,7 @@ func (s *Server) Bind() error {
 
     var limiter *rate.Limiter
     if 0 != s.userInfo.MaxRate {
-        // TODO: 这个速率限制不太精准，需要优化
-        limiter = rate.NewLimiter(rate.Limit(s.userInfo.MaxRate*1024*2), s.userInfo.MaxRate*1024)
+        limiter = rate.NewLimiter(rate.Limit(s.userInfo.MaxRate*1024), s.userInfo.MaxRate*512/2)
     }
 
     go func() {
