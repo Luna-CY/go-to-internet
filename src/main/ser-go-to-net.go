@@ -9,12 +9,12 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/config"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/proxy"
+    "golang.org/x/sys/unix"
     "io/ioutil"
     "os"
     "os/user"
     "path"
     "strconv"
-    "syscall"
 )
 
 // serverCommandUsage 打印控制台Usage信息
@@ -34,48 +34,49 @@ func serverCommandUsage() {
 }
 
 func main() {
-    config := &proxy.Config{}
+    serverConfig := &proxy.Config{}
 
-    flag.StringVar(&config.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
-    flag.IntVar(&config.Port, "p", 443, "监听端口号")
+    flag.StringVar(&serverConfig.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
+    flag.IntVar(&serverConfig.Port, "p", 443, "监听端口号")
 
-    flag.StringVar(&config.Acme, "acme", "/root/.acme.sh", "acme工具的根路径")
-    flag.StringVar(&config.SSLCerFile, "c", "", "SSL CER文件路径 (default \"${arg:acme}/${arg:H}/fullchain.cer\")")
-    flag.StringVar(&config.SSLKeyFile, "k", "", "SSL KEY文件路径 (default \"${arg:acme}/${arg:H}/${arg:H}.key\")")
+    flag.StringVar(&serverConfig.Acme, "acme", "/root/.acme.sh", "acme工具的根路径")
+    flag.StringVar(&serverConfig.SSLCerFile, "c", "", "SSL CER文件路径 (default \"${arg:acme}/${arg:H}/fullchain.cer\")")
+    flag.StringVar(&serverConfig.SSLKeyFile, "k", "", "SSL KEY文件路径 (default \"${arg:acme}/${arg:H}/${arg:H}.key\")")
 
-    flag.StringVar(&config.User, "u", "", "设置运行时用户")
-    flag.StringVar(&config.Group, "g", "", "设置运行时用户组")
+    // golang 暂时支持不了切换运行时用户，fork子进程的成本又比较高不值得
+    //flag.StringVar(&serverConfig.User, "u", "", "设置运行时用户")
+    //flag.StringVar(&serverConfig.Group, "g", "", "设置运行时用户组")
 
-    flag.StringVar(&config.UserConfig, "uc", "/etc/go-to-net/users.json", "用户配置文件，可以通过manager-go-to-net命令生成")
+    flag.StringVar(&serverConfig.UserConfig, "uc", "/etc/go-to-net/users.json", "用户配置文件，可以通过manager-go-to-net命令生成")
 
-    flag.BoolVar(&config.Verbose, "v", false, "打印详细日志")
+    flag.BoolVar(&serverConfig.Verbose, "v", false, "打印详细日志")
 
     flag.Usage = serverCommandUsage
     flag.Parse()
 
-    if "" == config.Hostname || "" == config.UserConfig || ("" == config.Acme && ("" == config.SSLCerFile || "" == config.SSLKeyFile)) {
+    if "" == serverConfig.Hostname || "" == serverConfig.UserConfig || ("" == serverConfig.Acme && ("" == serverConfig.SSLCerFile || "" == serverConfig.SSLKeyFile)) {
         flag.Usage()
 
         os.Exit(0)
     }
 
-    if "" != config.User {
-        if err := switchToUser(config.User); nil != err {
+    if "" != serverConfig.User {
+        if err := switchToUser(serverConfig.User); nil != err {
             logger.Errorf("切换用户失败: %v", err)
 
             os.Exit(1)
         }
     }
 
-    if "" != config.Group {
-        if err := switchToGroup(config.Group); nil != err {
+    if "" != serverConfig.Group {
+        if err := switchToGroup(serverConfig.Group); nil != err {
             logger.Errorf("切换用户组失败: %v", err)
 
             os.Exit(1)
         }
     }
 
-    tlsListen(config)
+    tlsListen(serverConfig)
 }
 
 // switchToUser 切换运行时用户
@@ -90,7 +91,7 @@ func switchToUser(username string) error {
         return err
     }
 
-    if err := syscall.Setuid(uid); nil != err {
+    if err := unix.Setuid(uid); nil != err {
         return err
     }
 
@@ -99,7 +100,7 @@ func switchToUser(username string) error {
         return err
     }
 
-    return syscall.Setgid(gid)
+    return unix.Setgid(gid)
 }
 
 // switchToGroup 切换运行时用户组
@@ -114,7 +115,7 @@ func switchToGroup(group string) error {
         return err
     }
 
-    return syscall.Setgid(gid)
+    return unix.Setgid(gid)
 }
 
 // tlsListen 启动tls服务器
