@@ -12,5 +12,5 @@ type UserConfig struct {
 type UserInfo struct {
     Password string `json:"password"` // 密码
     Expired  string `json:"expired"`  // 过期时间
-    MaxRate  int  `json:"max_rate"` // 最大传输速率
+    MaxRate  int    `json:"max_rate"` // 最大传输速率
 }

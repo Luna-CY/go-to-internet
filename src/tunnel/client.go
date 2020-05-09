@@ -5,6 +5,7 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/utils"
     "io"
     "net"
 )
@@ -59,6 +60,8 @@ func (c *Client) connect() error {
 
 // sendConnectData 发送用户信息
 func (c *Client) sendConnectData() error {
+    c.config.ServerPassword = utils.EncryptPassword(c.config.ServerPassword)
+
     userInfoLen := 1 + 1 + len(c.config.ServerUsername) + 1 + len(c.config.ServerPassword)
     targetInfoLen := 2 + 1 + 1 + len(c.config.TargetHostOrIp)
     dataLength := userInfoLen + targetInfoLen

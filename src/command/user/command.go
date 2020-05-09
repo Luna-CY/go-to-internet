@@ -5,6 +5,7 @@ import (
     "errors"
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/config"
+    "gitee.com/Luna-CY/go-to-internet/src/utils"
     "golang.org/x/crypto/bcrypt"
     "io/ioutil"
     "os"
@@ -159,6 +160,8 @@ func (u *userCmd) exec() error {
 
 // password 加密密码
 func (u *userCmd) password(password string) (string, error) {
+    password = utils.EncryptPassword(password)
+
     data, err := bcrypt.GenerateFromPassword([]byte(password), 4)
     if nil != err {
         return "", errors.New(fmt.Sprintf("生成密码失败: %v", err))
