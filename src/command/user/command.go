@@ -145,7 +145,7 @@ func (u *userCmd) exec() error {
     case u.cmdInputConfig.Del:
         _, ok := u.fileConfig.Users[u.cmdInputConfig.Username]
         if ok {
-            u.fileConfig.Users[u.cmdInputConfig.Username] = nil
+            delete(u.fileConfig.Users, u.cmdInputConfig.Username)
 
             update = true
         }
