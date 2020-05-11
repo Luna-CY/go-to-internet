@@ -10,4 +10,9 @@ package tunnel
 // VER CODE MSG_N MSG
 //  1   1     1    N
 
-const VER01 = 0x01
+const Ver01 = 0x01
+
+const Success = 0x00
+
+const CheckConnectTargetIp = "0.0.0.0"
+const CheckConnectTargetPort = 0

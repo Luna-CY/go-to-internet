@@ -13,7 +13,7 @@ func StartConnection(src net.Conn, serverConfig *Config, userConfig *config.User
     server, err := tunnel.NewServer(src, userConfig, serverConfig.Verbose)
     if nil != err {
         if serverConfig.Verbose {
-            logger.Debugf("创建隧道服务端失败: %v", err)
+            logger.Debugf("建立连接失败: %v", err)
         }
 
         ns := http.MockNginx{Conn: src, Server: "nginx", BindHost: serverConfig.Hostname}

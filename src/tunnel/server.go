@@ -37,6 +37,11 @@ type Server struct {
 
 // Bind 双向绑定客户端以及目标服务器
 func (s *Server) Bind() error {
+    // 如果是验证连接的请求直接返回完成
+    if CheckConnectTargetIp == s.dstIp && CheckConnectTargetPort == s.dstPort {
+        return nil
+    }
+
     logger.Infof("建立连接请求 -> %v:%d\n", s.dstIp, s.dstPort)
 
     dst, err := net.Dial("tcp", fmt.Sprintf("%v:%d", s.dstIp, s.dstPort))
@@ -113,7 +118,7 @@ func (s *Server) receiveUserInfo() (string, string, error) {
         return "", "", errors.New("读取版本号失败")
     }
 
-    if VER01 != ver[0] {
+    if Ver01 != ver[0] {
         return "", "", errors.New("不支持的协议版本")
     }
 
@@ -174,7 +179,7 @@ func (s *Server) parseTarget() error {
     var ipString string
     switch ipType[0] {
     case 0x01:
-        ipString = net.IP(ip[0:4]).String()
+        ipString = string(ip)
     case 0x03:
         ipString = string(ip)
     case 0x04:
@@ -189,8 +194,8 @@ func (s *Server) parseTarget() error {
 func (s *Server) sendRes() error {
     dataLength := 1 + 1 + 1 + len("OK")
     data := make([]byte, dataLength)
-    data[0] = VER01
-    data[1] = 0x00
+    data[0] = Ver01
+    data[1] = Success
     data[2] = byte(len("OK"))
 
     index := 3

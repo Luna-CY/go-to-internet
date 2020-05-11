@@ -26,6 +26,22 @@ func NewClient(config *Config) (*Client, error) {
     return client, nil
 }
 
+// CheckServer 检查服务端是否支持隧道协议
+func CheckServer(config *Config) error {
+    conn, err := tls.Dial("tcp", fmt.Sprintf("%v:%d", config.ServerHostname, config.ServerPort), nil)
+    if nil != err {
+        return err
+    }
+    defer conn.Close()
+
+    config.TargetType = 0x01
+    config.TargetHostOrIp = CheckConnectTargetIp
+    config.TargetPort = CheckConnectTargetPort
+
+    client := &Client{serverConn: conn, config: config}
+    return client.connect()
+}
+
 // Client 隧道的客户端结构体
 type Client struct {
     serverConn net.Conn // 服务器连接
@@ -67,7 +83,7 @@ func (c *Client) sendConnectData() error {
     dataLength := userInfoLen + targetInfoLen
 
     data := make([]byte, dataLength)
-    data[0] = VER01
+    data[0] = Ver01
     data[1] = byte(len(c.config.ServerUsername))
 
     index := 2
@@ -123,7 +139,7 @@ func (c *Client) receiveOk() error {
         return errors.New("读取应答版本号失败")
     }
 
-    if VER01 != ver[0] {
+    if Ver01 != ver[0] {
         return errors.New("不支持的协议版本")
     }
 

@@ -29,3 +29,15 @@ func (s *Socket) startTunnel(ipType byte, ip string, port int, verbose bool) (*t
 
     return client, nil
 }
+
+// checkTunnel 检查隧道是否连通
+func (s *Socket) checkTunnel() error {
+    config := &tunnel.Config{
+        ServerHostname: s.Hostname,
+        ServerPort:     s.Port,
+        ServerUsername: s.Username,
+        ServerPassword: s.Password,
+    }
+
+    return tunnel.CheckServer(config)
+}
