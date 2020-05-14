@@ -32,8 +32,12 @@ func main() {
     acmeConfig := &acme.Config{}
     acmeCmd := flag.NewFlagSet("acme", flag.ExitOnError)
     acmeConfig.Cmd = acmeCmd
+    acmeCmd.Usage = acmeConfig.Usage
 
     acmeCmd.BoolVar(&acmeConfig.Install, "install", false, "安装acme工具")
+    acmeCmd.BoolVar(&acmeConfig.Issue, "issue", false, "申请证书")
+
+    acmeCmd.StringVar(&acmeConfig.Hostname, "hostname", "", "操作的域名")
 
     if len(os.Args) < 2 || "-h" == os.Args[1] || "--help" == os.Args[1] {
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "manager-go-to-net subcommand options")
