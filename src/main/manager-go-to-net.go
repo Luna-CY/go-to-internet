@@ -1,8 +1,10 @@
 package main
 
 import (
+    "errors"
     "flag"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/command"
     "gitee.com/Luna-CY/go-to-internet/src/command/acme"
     "gitee.com/Luna-CY/go-to-internet/src/command/user"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
@@ -38,32 +40,27 @@ func main() {
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "sub commands:")
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "    user: 用户管理命令")
+        _, _ = fmt.Fprintln(flag.CommandLine.Output(), "    acme: Acme证书工具管理命令")
 
         os.Exit(0)
     }
 
     switch os.Args[1] {
     case "user":
-        if err := userCmd.Parse(os.Args[2:]); nil != err {
-            logger.Errorf("解析命令失败: %v", err)
-
-            os.Exit(1)
-        }
-
-        if !userConfig.Validate() {
+        if err := parse(userCmd, userConfig); nil != err {
             userCmd.Usage()
 
-            os.Exit(0)
+            return
         }
 
         if err := user.Exec(userConfig); nil != err {
             logger.Errorf("处理操作失败: %v", err)
         }
     case "acme":
-        if err := acmeCmd.Parse(os.Args[2:]); nil != err {
-            logger.Errorf("解析命令失败: %v", err)
+        if err := parse(acmeCmd, acmeConfig); nil != err {
+            acmeCmd.Usage()
 
-            os.Exit(1)
+            return
         }
 
         if err := acme.Exec(acmeConfig); nil != err {
@@ -74,4 +71,17 @@ func main() {
 
         return
     }
+}
+
+// parse 解析命令行输入
+func parse(cmd *flag.FlagSet, config command.Config) error {
+    if err := cmd.Parse(os.Args[2:]); nil != err {
+        return errors.New(fmt.Sprintf("解析命令失败: %v", err))
+    }
+
+    if !config.Validate() {
+        return errors.New("校验参数失败")
+    }
+
+    return nil
 }

@@ -23,3 +23,8 @@ func (c *Config) Usage() {
 
     c.Cmd.PrintDefaults()
 }
+
+// Validate 检查配置参数是否有效
+func (c *Config) Validate() bool {
+    return true
+}
