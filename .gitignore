@@ -12,4 +12,4 @@
 *.out
 
 # Custom
-*-go-to-net
+*-go-to-net*
