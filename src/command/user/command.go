@@ -60,6 +60,10 @@ func (u *userCmd) validateConfigFilePath() error {
 
 // init 初始化配置文件
 func (u *userCmd) init() error {
+    if err := os.MkdirAll(path.Dir(u.cmdInputConfig.Config), os.FileMode(0644)); nil != err {
+        return errors.New(fmt.Sprintf("创建配置目录失败: %v", err))
+    }
+
     file, err := os.OpenFile(u.cmdInputConfig.Config, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
     if nil != err {
         return errors.New(fmt.Sprintf("创建配置文件失败: %v", err))
