@@ -3,22 +3,47 @@ package acme
 import (
     "bufio"
     "errors"
+    "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
+    "golang.org/x/sys/unix"
     "io"
+    "net/http"
     "os"
     "os/exec"
     "path"
     "strings"
 )
 
+const AcmePath = "https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh"
+
 // Exec 执行acme子命令
 func Exec(config *Config) error {
     switch {
     case config.Install:
+        home, err := os.UserHomeDir()
+        if nil != err {
+            return err
+        }
+        acmePath := path.Join(home, ".acme.sh")
+
+        info, err := os.Stat(acmePath)
+        if nil == err {
+            if !info.IsDir() {
+                return errors.New(fmt.Sprintf("[%v]路径已存在并且不是一个目录", acmePath))
+            }
+
+            logger.Infof("已安装acme.sh工具，重新安装请删除[%v]目录后重新执行", acmePath)
+
+            return nil
+        }
+
+        if !os.IsNotExist(err) {
+            return errors.New(fmt.Sprintf("获取路径信息失败: %v", err))
+        }
+
         output := path.Join(os.TempDir(), "install-acme.sh")
 
-        cmd := exec.Command("curl", "https://get.acme.sh", "-o", output)
-        if err := cmd.Run(); nil != err {
+        if err := download(AcmePath, output); nil != err {
             return err
         }
 
@@ -26,8 +51,12 @@ func Exec(config *Config) error {
             return err
         }
 
-        if err := execCmd(output); nil != err {
+        if err := execCommand("sh", []string{"-c", output}, &[]string{"INSTALLONLINE=1"}, true); nil != err {
             return err
+        }
+
+        if err := unix.Unlink(output); nil != err {
+            return errors.New(fmt.Sprintf("删除安装脚本失败: %v", err))
         }
 
         logger.Info("安装完成")
@@ -46,7 +75,7 @@ func Exec(config *Config) error {
             return errors.New("无法找到acme.sh工具")
         }
 
-        if err := execCmd(command, "--issue", "-d", config.Hostname, "--nginx"); nil != err {
+        if err := execCommand(command, []string{"--issue", "-d", config.Hostname, "--nginx"}, nil, true); nil != err {
             return err
         }
 
@@ -56,32 +85,64 @@ func Exec(config *Config) error {
     return nil
 }
 
-// execCmd 执行外部命令并输出结果到logger
-func execCmd(name string, args ...string) error {
+// execCommand 执行命令
+func execCommand(name string, args []string, env *[]string, output bool) error {
     cmd := exec.Command(name, args...)
-    logger.Infof("执行命令: %v", strings.Join(cmd.Args, " "))
+    cmd.Env = os.Environ()
 
-    stdout, err := cmd.StdoutPipe()
+    if nil != env {
+        for _, value := range *env {
+            cmd.Env = append(cmd.Env, value)
+        }
+    }
+
+    if output {
+        stdout, err := cmd.StdoutPipe()
+        if nil != err {
+            return err
+        }
+        defer stdout.Close()
+
+        if err := cmd.Start(); nil != err {
+            return err
+        }
+
+        reader := bufio.NewReader(stdout)
+        for {
+            line, err := reader.ReadString('\n')
+            if err != nil || io.EOF == err {
+                break
+            }
+            logger.Info(strings.Trim(line, "\n"))
+        }
+
+        if err := cmd.Wait(); nil != err {
+            return err
+        }
+    } else {
+        if err := cmd.Run(); nil != err {
+            return err
+        }
+    }
+
+    return nil
+}
+
+// download 下载文件
+func download(from, output string) error {
+    res, err := http.Get(from)
     if nil != err {
         return err
     }
-    defer stdout.Close()
+    defer res.Body.Close()
 
-    if err := cmd.Start(); nil != err {
+    out, err := os.Create(output)
+    if err != nil {
         return err
     }
+    defer out.Close()
 
-    reader := bufio.NewReader(stdout)
-    for {
-        line, err := reader.ReadString('\n')
-        if err != nil || io.EOF == err {
-            break
-        }
-        logger.Info(line)
-    }
+    _, err = io.Copy(out, res.Body)
 
-    if err := cmd.Wait(); nil != err {
-        return err
-    }
-    return nil
+    return err
 }
