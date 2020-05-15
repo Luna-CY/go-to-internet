@@ -1,7 +1,3 @@
-TODO: 伪装nginx服务器
-OK 检查所有http请求，header头中的Host不为监听域名的，应该返回nginx默认页
-OK Host为监听域名的，返回400错误页
-
 TODO: 流量及限制
 WAIT 统计流量以及限制上限
 
@@ -10,3 +6,6 @@ WAIT 单个用户设置允许的最大连接数
 
 TODO: 优化acme命令
 WAIT 增加对nginx、apache以及standalone模式的支持
+
+TODO: 支持多域名证书
+WAIT 服务器增加对多域名的解析，并且域名跟用户应该有绑定，未指定域名的用户应该允许以任意域名进行连接，否则仅允许以绑定的域名连接
