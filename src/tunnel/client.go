@@ -5,9 +5,11 @@ import (
     "encoding/binary"
     "errors"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/utils"
     "io"
     "net"
+    "time"
 )
 
 // NewClient 创建一个客户端
@@ -63,12 +65,25 @@ func (c *Client) Bind(src net.Conn) error {
 
 // connect 连接服务器
 func (c *Client) connect() error {
-    if err := c.sendConnectData(); nil != err {
-        return err
-    }
+    for {
+        if err := c.sendConnectData(); nil != err {
+            return err
+        }
 
-    if err := c.receiveOk(); nil != err {
-        return err
+        code, msg, err := c.receive()
+        if nil != err {
+            return err
+        }
+
+        if Success == code {
+            break
+        } else if ConnectionUpperLimit == code {
+            time.Sleep(1 * time.Second)
+
+            continue
+        } else {
+            logger.Errorf("无法识别的消息: %v", msg)
+        }
     }
 
     return nil
@@ -130,17 +145,17 @@ func (c *Client) sendConnectData() error {
 }
 
 // receiveRes 读取响应消息
-func (c *Client) receiveOk() error {
+func (c *Client) receive() (byte, string, error) {
     ver := make([]byte, 1)
     n, err := c.serverConn.Read(ver)
     if n != 1 || nil != err {
         c.serverConn.Close()
 
-        return errors.New("读取应答版本号失败")
+        return 0xff, "", errors.New("读取应答版本号失败")
     }
 
     if Ver01 != ver[0] {
-        return errors.New("不支持的协议版本")
+        return 0xff, "", errors.New("不支持的协议版本")
     }
 
     code := make([]byte, 1)
@@ -148,11 +163,7 @@ func (c *Client) receiveOk() error {
     if n != 1 || nil != err {
         c.serverConn.Close()
 
-        return errors.New("读取响应码失败")
-    }
-
-    if 0x00 != code[0] {
-        return errors.New("未识别的响应码")
+        return 0xff, "", errors.New("读取响应码失败")
     }
 
     msgLen := make([]byte, 1)
@@ -160,7 +171,7 @@ func (c *Client) receiveOk() error {
     if n != 1 || nil != err {
         c.serverConn.Close()
 
-        return errors.New("读取消息长度失败")
+        return 0xff, "", errors.New("读取消息长度失败")
     }
 
     msg := make([]byte, msgLen[0])
@@ -168,8 +179,8 @@ func (c *Client) receiveOk() error {
     if n != int(msgLen[0]) || nil != err {
         c.serverConn.Close()
 
-        return errors.New("读取消息失败")
+        return 0xff, "", errors.New("读取消息失败")
     }
 
-    return nil
+    return code[0], string(msg), nil
 }

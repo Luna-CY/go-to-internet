@@ -10,7 +10,9 @@ type UserConfig struct {
 
 // UserInfo 用户信息结构
 type UserInfo struct {
-    Password string `json:"password"` // 密码
-    Expired  string `json:"expired"`  // 过期时间
-    MaxRate  int    `json:"max_rate"` // 最大传输速率
+    Password          string `json:"password"`           // 密码
+    Expired           string `json:"expired"`            // 过期时间
+    MaxRate           int    `json:"max_rate"`           // 最大传输速率
+    MaxConnection     int    `json:"mac_connection"`     // 最大连接数
+    CurrentConnection int    `json:"current_connection"` // 当前连接数
 }

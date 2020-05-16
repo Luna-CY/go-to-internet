@@ -59,6 +59,8 @@ func (s *Server) Bind() error {
     state1 := utils.Bind(s.clientConn, dst, limiter)
     state2 := utils.Bind(dst, s.clientConn, limiter)
 
+    s.userInfo.CurrentConnection += 1
+
     for {
         select {
         case code := <-state1:
@@ -75,6 +77,8 @@ func (s *Server) Bind() error {
             over += 1
         default:
             if 2 == over {
+                s.userInfo.CurrentConnection -= 1
+
                 return nil
             }
         }
@@ -103,6 +107,14 @@ func (s *Server) checkConnection() bool {
     }
     s.userInfo = userInfo
 
+    if err := s.checkConnectionNumber(); nil != err {
+        if s.verbose {
+            logger.Errorf("检查用户连接数失败: %v", err)
+        }
+
+        return false
+    }
+
     if err := s.parseTarget(); nil != err {
         if s.verbose {
             logger.Errorf("解析目标数据失败: %v", err)
@@ -111,7 +123,7 @@ func (s *Server) checkConnection() bool {
         return false
     }
 
-    if err := s.sendRes(); nil != err {
+    if err := s.sendRes(Success, SuccessMessage); nil != err {
         if s.verbose {
             logger.Error("发送协议响应数据失败")
         }
@@ -161,6 +173,19 @@ func (s *Server) receiveUserInfo() (string, string, error) {
     return string(user), string(pass), nil
 }
 
+// checkConnectionNumber 检查用户连接数
+func (s *Server) checkConnectionNumber() error {
+    if 0 != s.userInfo.MaxConnection && s.userInfo.CurrentConnection >= s.userInfo.MaxConnection {
+        if err := s.sendRes(ConnectionUpperLimit, ConnectionUpperLimitMessage); nil != err {
+            return err
+        }
+
+        return errors.New("已到达连接数上限")
+    }
+
+    return nil
+}
+
 // parseTarget 解析目标信息
 func (s *Server) parseTarget() error {
     port := make([]byte, 2)
@@ -203,15 +228,15 @@ func (s *Server) parseTarget() error {
 }
 
 // sendRes 发送响应数据
-func (s *Server) sendRes() error {
-    dataLength := 1 + 1 + 1 + len("OK")
+func (s *Server) sendRes(code byte, message string) error {
+    dataLength := 1 + 1 + 1 + len(message)
     data := make([]byte, dataLength)
     data[0] = Ver01
-    data[1] = Success
-    data[2] = byte(len("OK"))
+    data[1] = code
+    data[2] = byte(len(message))
 
     index := 3
-    for _, d := range []byte("OK") {
+    for _, d := range []byte(message) {
         data[index] = d
         index++
     }

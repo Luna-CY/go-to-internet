@@ -2,7 +2,7 @@ TODO: 流量及限制
 WAIT 统计流量以及限制上限
 
 TODO: 限制用户连接数
-WAIT 单个用户设置允许的最大连接数
+OK 单个用户设置允许的最大连接数
 
 TODO: 优化acme命令
 WAIT 增加对nginx、apache以及standalone模式的支持

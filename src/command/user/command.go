@@ -118,7 +118,21 @@ func (u *userCmd) exec() error {
             return err
         }
 
-        userInfo := &config.UserInfo{Password: password, Expired: u.cmdInputConfig.Expired, MaxRate: u.cmdInputConfig.MaxRate}
+        expired := "-"
+        maxRate := 0
+        maxConnection := 0
+
+        if "" != u.cmdInputConfig.Expired {
+            expired = u.cmdInputConfig.Expired
+        }
+        if -1 != u.cmdInputConfig.MaxRate {
+            maxRate = u.cmdInputConfig.MaxRate
+        }
+        if -1 != u.cmdInputConfig.MaxConnection {
+            maxConnection = u.cmdInputConfig.MaxConnection
+        }
+
+        userInfo := &config.UserInfo{Password: password, Expired: expired, MaxRate: maxRate, MaxConnection: maxConnection}
         u.fileConfig.Users[u.cmdInputConfig.Username] = userInfo
 
         update = true
@@ -143,6 +157,10 @@ func (u *userCmd) exec() error {
 
         if -1 != u.cmdInputConfig.MaxRate {
             userInfo.MaxRate = u.cmdInputConfig.MaxRate
+        }
+
+        if -1 != u.cmdInputConfig.MaxConnection {
+            userInfo.MaxConnection = u.cmdInputConfig.MaxConnection
         }
 
         update = true

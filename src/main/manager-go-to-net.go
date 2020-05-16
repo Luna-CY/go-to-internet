@@ -26,8 +26,9 @@ func main() {
     userCmd.StringVar(&userConfig.Config, "c", "/etc/go-to-net/users.json", "配置文件位置")
     userCmd.StringVar(&userConfig.Username, "u", "", "用户名，用户的唯一标识")
     userCmd.StringVar(&userConfig.Password, "p", "", "用户密码")
-    userCmd.StringVar(&userConfig.Expired, "e", "", "用户过期时间，单短横线代表不过期，格式: 2006-01-02T15:04:05")
-    userCmd.IntVar(&userConfig.MaxRate, "r", -1, "用户最大速率，0代表不限速，单位为KB")
+    userCmd.StringVar(&userConfig.Expired, "expired", "", "用户过期时间，-表示不过期，格式: 2006-01-02T15:04:05 (default -)")
+    userCmd.IntVar(&userConfig.MaxRate, "max-rate", -1, "用户最大传输速率，-1表示未设置该参数；0表示不限速，非0表示最大传输速率，单位为KB")
+    userCmd.IntVar(&userConfig.MaxConnection, "max-connection", -1, "用户最大连接数，-1表示未设置该参数；0表示不限制连接数，非0表示最大连接数")
 
     acmeConfig := &acme.Config{}
     acmeCmd := flag.NewFlagSet("acme", flag.ExitOnError)

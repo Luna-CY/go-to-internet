@@ -13,6 +13,10 @@ package tunnel
 const Ver01 = 0x01
 
 const Success = 0x00
+const SuccessMessage = "OK"
+
+const ConnectionUpperLimit = 0x01
+const ConnectionUpperLimitMessage = "已到达连接上限"
 
 const CheckConnectTargetIp = "0.0.0.0"
 const CheckConnectTargetPort = 0
