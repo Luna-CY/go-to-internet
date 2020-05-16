@@ -42,3 +42,22 @@ func Copy(writer io.Writer, reader io.Reader, limiter *rate.Limiter) (written in
     }
     return written, err
 }
+
+// Bind 对writer和reader进行绑定
+// 返回一个通道，无错误完成时向通道输入0，发生错误时向通道输入1
+func Bind(dst io.Writer, src io.Reader, limiter *rate.Limiter) chan int {
+    ch := make(chan int)
+
+    go func() {
+        code := 0
+
+        if _, err := Copy(dst, src, limiter); nil != err && io.EOF != err {
+            code = 1
+        }
+
+        ch <- code
+        close(ch)
+    }()
+
+    return ch
+}

@@ -8,7 +8,6 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/utils"
     "golang.org/x/crypto/bcrypt"
     "golang.org/x/time/rate"
-    "io"
     "net"
 )
 
@@ -49,24 +48,37 @@ func (s *Server) Bind() error {
         return err
     }
     defer dst.Close()
+    defer s.clientConn.Close()
 
     var limiter *rate.Limiter
     if 0 != s.userInfo.MaxRate {
         limiter = rate.NewLimiter(rate.Limit(s.userInfo.MaxRate*1024), s.userInfo.MaxRate*512/2)
     }
 
-    go func() {
-        defer s.clientConn.Close()
-        if _, err := utils.Copy(s.clientConn, dst, limiter); nil != err && io.EOF != err && s.verbose {
-            logger.Errorf("目标服务器 -> 隧道客户端: %v", err)
+    over := 0
+    state1 := utils.Bind(s.clientConn, dst, limiter)
+    state2 := utils.Bind(dst, s.clientConn, limiter)
+
+    for {
+        select {
+        case code := <-state1:
+            if 0 != code {
+                logger.Errorf("目标服务器 -> 隧道客户端: 传输数据失败")
+            }
+
+            over += 1
+        case code := <-state2:
+            if 0 != code {
+                logger.Errorf("隧道客户端 -> 目标服务器: 传输数据失败")
+            }
+
+            over += 1
+        default:
+            if 2 == over {
+                return nil
+            }
         }
-    }()
-
-    if _, err := utils.Copy(dst, s.clientConn, limiter); nil != err && io.EOF != err && s.verbose {
-        logger.Errorf("隧道客户端 -> 目标服务器: %v", err)
     }
-
-    return nil
 }
 
 // checkConnection 检查连接是否是私有协议
