@@ -11,7 +11,9 @@ type Config struct {
 
     Install bool // 安装acme.sh
 
-    Issue bool // 申请证书
+    Issue      bool // 申请证书
+    Standalone bool // 模拟一个http服务器
+    Nginx      bool // 通过nginx验证
 
     Hostname string // 操作的域名
 }

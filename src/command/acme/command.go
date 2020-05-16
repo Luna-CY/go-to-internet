@@ -5,6 +5,7 @@ import (
     "errors"
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
+    "gitee.com/Luna-CY/go-to-internet/src/utils"
     "golang.org/x/sys/unix"
     "io"
     "net/http"
@@ -75,11 +76,65 @@ func Exec(config *Config) error {
             return errors.New("无法找到acme.sh工具")
         }
 
-        if err := execCommand(command, []string{"--issue", "-d", config.Hostname, "--nginx"}, nil, true); nil != err {
-            return err
+        switch {
+        case config.Nginx:
+            if err := generateNginxConfig(config.Hostname); nil != err {
+                return errors.New(fmt.Sprintf("创建nginx配置失败: %v", err))
+            }
+
+            if err := execCommand(command, []string{"--issue", "-d", config.Hostname, "--nginx"}, nil, true); nil != err {
+                return err
+            }
+        default:
+            if err := execCommand(command, []string{"--issue", "-d", config.Hostname, "--standalone"}, nil, true); nil != err {
+                return err
+            }
         }
 
         logger.Info("申请证书完成")
+    }
+
+    return nil
+}
+
+// generateNginxConfig 生成nginx配置文件
+func generateNginxConfig(hostname string) error {
+    hostConfig := strings.Replace(template, "{host}", hostname, 1)
+
+    debian, err := utils.FileExists("/usr/bin/apt")
+    if nil != err {
+        return err
+    }
+
+    centos, err := utils.FileExists("/usr/bin/yum")
+    if nil != err {
+        return err
+    }
+
+    var configPath string
+
+    switch {
+    case debian:
+        if err := os.MkdirAll("/etc/nginx/sites-enabled", 0755); nil != err {
+            return err
+        }
+        configPath = fmt.Sprintf("/etc/nginx/sites-enabled/%v.conf", hostname)
+    case centos:
+        if err := os.MkdirAll("/etc/nginx/conf.d", 0755); nil != err {
+            return err
+        }
+        configPath = fmt.Sprintf("/etc/nginx/conf.d/%v.conf", hostname)
+    default:
+        return errors.New("不支持的系统类型")
+    }
+
+    file, err := os.OpenFile(configPath, os.O_WRONLY, 0644)
+    if nil != err {
+        return err
+    }
+
+    if _, err := file.Write([]byte(hostConfig)); nil != err {
+        return err
     }
 
     return nil
