@@ -56,7 +56,6 @@ func Bind(dst io.Writer, src io.Reader, limiter *rate.Limiter) chan int {
         }
 
         ch <- code
-        close(ch)
     }()
 
     return ch

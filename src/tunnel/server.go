@@ -57,7 +57,9 @@ func (s *Server) Bind() error {
 
     over := 0
     state1 := utils.Bind(s.clientConn, dst, limiter)
+    defer close(state1)
     state2 := utils.Bind(dst, s.clientConn, limiter)
+    defer close(state2)
 
     s.userInfo.CurrentConnection += 1
 
@@ -107,17 +109,17 @@ func (s *Server) checkConnection() bool {
     }
     s.userInfo = userInfo
 
-    if err := s.checkConnectionNumber(); nil != err {
+    if err := s.parseTarget(); nil != err {
         if s.verbose {
-            logger.Errorf("检查用户连接数失败: %v", err)
+            logger.Errorf("解析目标数据失败: %v", err)
         }
 
         return false
     }
 
-    if err := s.parseTarget(); nil != err {
+    if err := s.checkConnectionNumber(); nil != err {
         if s.verbose {
-            logger.Errorf("解析目标数据失败: %v", err)
+            logger.Errorf("检查用户连接数失败: %v", err)
         }
 
         return false
