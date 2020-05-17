@@ -28,3 +28,15 @@
 
 - `cli-go-to-net`
 代理客户端，根据系统环境选择
+
+#### 本地开发指南
+将`custom-root-ca/ca/certs/cacert.pem`根证书添加进系统的根证书库
+
+一、使用`local.luna.xin`
+
+- 绑定`local.luna.xin`域名到本地`127.0.0.1`
+- 运行服务器`ser-go-to-net -H local.luna.xin -c cert/server.pem -k cert/server.key`启动
+
+二、自定义域名
+- 通过`custom-root-ca`签发自定义域名证书
+- 运行服务器`ser-go-to-net -H 域名 -c 证书pem路径 -k 证书key路径`启动
