@@ -6,6 +6,7 @@ import (
     "errors"
     "flag"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/common"
     "gitee.com/Luna-CY/go-to-internet/src/config"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/proxy"
@@ -19,6 +20,7 @@ import (
 
 // serverCommandUsage 打印控制台Usage信息
 func serverCommandUsage() {
+    _, _ = fmt.Fprintf(flag.CommandLine.Output(), "version %v\n", common.Version)
     _, _ = fmt.Fprintln(flag.CommandLine.Output(), "ser-go-to-net -H Hostname [options]")
     _, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
     _, _ = fmt.Fprintln(flag.CommandLine.Output(), "此工具默认通过acme.sh工具来管理证书，如果不使用acme.sh工具，需要设置-c与-k参数指定证书位置")

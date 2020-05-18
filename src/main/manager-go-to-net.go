@@ -7,6 +7,7 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/command"
     "gitee.com/Luna-CY/go-to-internet/src/command/acme"
     "gitee.com/Luna-CY/go-to-internet/src/command/user"
+    "gitee.com/Luna-CY/go-to-internet/src/common"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "os"
 )
@@ -41,6 +42,7 @@ func main() {
     acmeCmd.StringVar(&acmeConfig.Hostname, "hostname", "", "操作的域名")
 
     if len(os.Args) < 2 || "-h" == os.Args[1] || "--help" == os.Args[1] {
+        _, _ = fmt.Fprintf(flag.CommandLine.Output(), "version %v\n", common.Version)
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "manager-go-to-net subcommand options")
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "sub commands:")
