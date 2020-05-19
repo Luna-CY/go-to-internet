@@ -101,25 +101,20 @@ func Exec(config *Config) error {
 func generateNginxConfig(hostname string) error {
     hostConfig := strings.Replace(template, "{host}", hostname, 1)
 
-    debian, err := utils.FileExists("/usr/bin/apt")
-    if nil != err {
-        return err
-    }
-
-    centos, err := utils.FileExists("/usr/bin/yum")
+    system, err := getOsType()
     if nil != err {
         return err
     }
 
     var configPath string
 
-    switch {
-    case debian:
+    switch system {
+    case "debian":
         if err := os.MkdirAll("/etc/nginx/sites-enabled", 0755); nil != err {
             return err
         }
         configPath = fmt.Sprintf("/etc/nginx/sites-enabled/%v.conf", hostname)
-    case centos:
+    case "centos":
         if err := os.MkdirAll("/etc/nginx/conf.d", 0755); nil != err {
             return err
         }
@@ -138,6 +133,28 @@ func generateNginxConfig(hostname string) error {
     }
 
     return nil
+}
+
+// getOsType 获取文件系统类型
+func getOsType() (string, error) {
+
+    if debian, err := utils.FileExists("/usr/bin/apt"); nil != err || debian {
+        if debian {
+            return "debian", nil
+        }
+
+        return "", err
+    }
+
+    if centos, err := utils.FileExists("/usr/bin/yum"); nil != err || centos {
+        if centos {
+            return "centos", nil
+        }
+
+        return "", err
+    }
+
+    return "unknown", nil
 }
 
 // execCommand 执行命令
