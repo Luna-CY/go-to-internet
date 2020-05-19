@@ -98,6 +98,10 @@ func Exec(config *Config) error {
 
 // generateNginxConfig 生成nginx配置文件
 func generateNginxConfig(hostname string) error {
+    if err := os.MkdirAll("/var/www/html", 0755); nil != err {
+        return err
+    }
+
     hostConfig := strings.Replace(template, "{host}", hostname, 1)
 
     system, err := getOsType()
