@@ -1,7 +1,7 @@
 # go-to-internet
 
 #### 介绍
-基于TLS协议的代理服务器
+基于TLS协议的透明代理服务器
 
 特性：
 
@@ -44,6 +44,11 @@
 
 三、 默认情况下`ser-go-to-net`命令能够根据域名查找`acme.sh`工具申请的证书，其默认路径一般在`/root/.acme.sh/YOUR_HOST`目录下，如果不使用默认规则，可以通过运行参数来指定证书位置，使用方式可以通过`ser-go-to-net -help`来获取
 
+#### 客户端项目
+
+- macos: [GoToNetUI-X](https://gitee.com/Luna-CY/GoToNetUI-X)
+- android: [GoToNetUI-A (开发中)](https://gitee.com/Luna-CY/GoToNetUI-A)
+- windows: GoToNetUI-W (计划中)
 
 #### 本地开发指南
 将`custom-root-ca/ca/certs/cacert.pem`根证书添加进系统的根证书库
