@@ -15,7 +15,3 @@ func TestGetOsType(t *testing.T) {
         t.Errorf("测试失败，系统类型为：%v\n", system)
     }
 }
-
-func TestGenerateNginxConfig(t *testing.T) {
-    // TODO
-}

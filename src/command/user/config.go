@@ -62,7 +62,7 @@ func (c *Config) Validate() bool {
 
         return true
     case c.Upd:
-        if "" == c.Username || ("" == c.Password && "" == c.Expired && -1 == c.MaxRate && -1 == c.MaxConnection) {
+        if "" == c.Username || ("" == c.Password && "" == c.Expired && 0 > c.MaxRate && 0 > c.MaxConnection) {
             return false
         }
 

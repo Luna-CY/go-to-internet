@@ -4,6 +4,7 @@ import (
     "bufio"
     "errors"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/common"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/utils"
     "golang.org/x/sys/unix"
@@ -14,8 +15,6 @@ import (
     "path"
     "strings"
 )
-
-const AcmePath = "https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh"
 
 // Exec 执行acme子命令
 func Exec(config *Config) error {
@@ -44,7 +43,7 @@ func Exec(config *Config) error {
 
         output := path.Join(os.TempDir(), "install-acme.sh")
 
-        if err := download(AcmePath, output); nil != err {
+        if err := download(common.AcmePath, output); nil != err {
             return err
         }
 
