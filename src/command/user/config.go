@@ -3,6 +3,7 @@ package user
 import (
     "flag"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/common"
     "time"
 )
 
@@ -54,7 +55,7 @@ func (c *Config) Validate() bool {
         }
 
         if "" != c.Expired && "-" != c.Expired {
-            if _, err := time.Parse("2006-01-02T15:04:05", c.Expired); nil != err {
+            if _, err := time.Parse(common.TimePattern, c.Expired); nil != err {
                 return false
             }
         }
@@ -66,7 +67,7 @@ func (c *Config) Validate() bool {
         }
 
         if "" != c.Expired && "-" != c.Expired {
-            if _, err := time.Parse("2006-01-02T15:04:05", c.Expired); nil != err {
+            if _, err := time.Parse(common.TimePattern, c.Expired); nil != err {
                 return false
             }
         }

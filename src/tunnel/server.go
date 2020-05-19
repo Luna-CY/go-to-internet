@@ -3,12 +3,14 @@ package tunnel
 import (
     "errors"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/common"
     "gitee.com/Luna-CY/go-to-internet/src/config"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/utils"
     "golang.org/x/crypto/bcrypt"
     "golang.org/x/time/rate"
     "net"
+    "time"
 )
 
 // NewServer 新建一个隧道的服务端
@@ -117,6 +119,14 @@ func (s *Server) checkConnection() bool {
         return false
     }
 
+    if err := s.checkUserExpired(); nil != err {
+        if s.verbose {
+            logger.Errorf("检查用户连有效期失败: %v", err)
+        }
+
+        return false
+    }
+
     if err := s.checkConnectionNumber(); nil != err {
         if s.verbose {
             logger.Errorf("检查用户连接数失败: %v", err)
@@ -186,6 +196,24 @@ func (s *Server) checkConnectionNumber() error {
     }
 
     return nil
+}
+
+// checkUserExpired 检查用户有效期
+func (s *Server) checkUserExpired() error {
+    if "-" == s.userInfo.Expired {
+        return nil
+    }
+
+    expired, err := time.Parse(common.TimePattern, s.userInfo.Expired)
+    if nil != err {
+        return err
+    }
+
+    if expired.Before(time.Now()) {
+        return nil
+    }
+
+    return errors.New("用户已过期")
 }
 
 // parseTarget 解析目标信息
