@@ -3,12 +3,14 @@ package main
 import (
     "flag"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/common"
     "gitee.com/Luna-CY/go-to-internet/src/socket"
     "os"
 )
 
 // serverCommandUsage 打印控制台Usage信息
 func clientCommandUsage() {
+    _, _ = fmt.Fprintf(flag.CommandLine.Output(), "version %v\n", common.Version)
     _, _ = fmt.Fprintln(flag.CommandLine.Output(), "cli-go-to-net -sh Hostname -u USERNAME -p PASSWORD [options]")
 
     flag.PrintDefaults()

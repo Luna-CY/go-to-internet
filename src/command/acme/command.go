@@ -4,6 +4,7 @@ import (
     "bufio"
     "errors"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/common"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/utils"
     "golang.org/x/sys/unix"
@@ -14,8 +15,6 @@ import (
     "path"
     "strings"
 )
-
-const AcmePath = "https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh"
 
 // Exec 执行acme子命令
 func Exec(config *Config) error {
@@ -44,7 +43,7 @@ func Exec(config *Config) error {
 
         output := path.Join(os.TempDir(), "install-acme.sh")
 
-        if err := download(AcmePath, output); nil != err {
+        if err := download(common.AcmePath, output); nil != err {
             return err
         }
 
@@ -66,10 +65,11 @@ func Exec(config *Config) error {
         if nil != err {
             return err
         }
+
         command := path.Join(home, ".acme.sh", "acme.sh")
         info, err := os.Stat(command)
         if nil != err {
-            return err
+            return errors.New(fmt.Sprintf("无法找到acme.sh工具: %v", err))
         }
 
         if info.IsDir() {
@@ -78,6 +78,10 @@ func Exec(config *Config) error {
 
         switch {
         case config.Nginx:
+            if err := checkAndInstallNginx(); nil != err {
+                return err
+            }
+
             if err := generateNginxConfig(config.Hostname); nil != err {
                 return errors.New(fmt.Sprintf("创建nginx配置失败: %v", err))
             }
@@ -97,29 +101,72 @@ func Exec(config *Config) error {
     return nil
 }
 
+// checkAndInstallNginx 检查nginx是否存在，不存在时安装nginx
+func checkAndInstallNginx() error {
+    cmd := exec.Command("nginx", "-v")
+    if err := cmd.Run(); nil == err {
+        return nil
+    }
+
+    reader := bufio.NewReader(os.Stdin)
+    fmt.Printf("未找到nginx命令，是否安装nginx服务器 [y/N] :")
+
+    input, err := reader.ReadString('\n')
+    if nil != err {
+        return errors.New(fmt.Sprintf("接收输入失败: %v", err))
+    }
+
+    if "y" == strings.Trim(input, "\n") {
+        system, err := getOsType()
+        if nil != err {
+            return err
+        }
+
+        switch system {
+        case "debian":
+            if err := execCommand("apt", []string{"install", "nginx", "-y"}, nil, true); nil != err {
+                return errors.New(fmt.Sprintf("安装nginx失败: %v", err))
+            }
+        case "centos":
+            if err := execCommand("yum", []string{"install", "nginx", "-y"}, nil, true); nil != err {
+                return errors.New(fmt.Sprintf("安装nginx失败: %v", err))
+            }
+        default:
+            return errors.New("不支持的系统类型")
+        }
+
+        if err := cmd.Run(); nil == err {
+            return nil
+        }
+
+        return errors.New("安装nginx服务器失败")
+    }
+
+    return errors.New("未安装nginx服务器")
+}
+
 // generateNginxConfig 生成nginx配置文件
 func generateNginxConfig(hostname string) error {
-    hostConfig := strings.Replace(template, "{host}", hostname, 1)
-
-    debian, err := utils.FileExists("/usr/bin/apt")
-    if nil != err {
+    if err := os.MkdirAll("/var/www/html", 0755); nil != err {
         return err
     }
 
-    centos, err := utils.FileExists("/usr/bin/yum")
+    hostConfig := strings.Replace(template, "{host}", hostname, 1)
+
+    system, err := getOsType()
     if nil != err {
         return err
     }
 
     var configPath string
 
-    switch {
-    case debian:
+    switch system {
+    case "debian":
         if err := os.MkdirAll("/etc/nginx/sites-enabled", 0755); nil != err {
             return err
         }
         configPath = fmt.Sprintf("/etc/nginx/sites-enabled/%v.conf", hostname)
-    case centos:
+    case "centos":
         if err := os.MkdirAll("/etc/nginx/conf.d", 0755); nil != err {
             return err
         }
@@ -128,7 +175,7 @@ func generateNginxConfig(hostname string) error {
         return errors.New("不支持的系统类型")
     }
 
-    file, err := os.OpenFile(configPath, os.O_WRONLY, 0644)
+    file, err := os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
     if nil != err {
         return err
     }
@@ -138,6 +185,28 @@ func generateNginxConfig(hostname string) error {
     }
 
     return nil
+}
+
+// getOsType 获取文件系统类型
+func getOsType() (string, error) {
+
+    if debian, err := utils.FileExists("/usr/bin/apt"); nil != err || debian {
+        if debian {
+            return "debian", nil
+        }
+
+        return "", err
+    }
+
+    if centos, err := utils.FileExists("/usr/bin/yum"); nil != err || centos {
+        if centos {
+            return "centos", nil
+        }
+
+        return "", err
+    }
+
+    return "unknown", nil
 }
 
 // execCommand 执行命令
@@ -158,17 +227,32 @@ func execCommand(name string, args []string, env *[]string, output bool) error {
         }
         defer stdout.Close()
 
+        stderr, err := cmd.StderrPipe()
+        if nil != err {
+            return err
+        }
+        defer stderr.Close()
+
         if err := cmd.Start(); nil != err {
             return err
         }
 
-        reader := bufio.NewReader(stdout)
+        outReader := bufio.NewReader(stdout)
         for {
-            line, err := reader.ReadString('\n')
+            line, err := outReader.ReadString('\n')
             if err != nil || io.EOF == err {
                 break
             }
             logger.Info(strings.Trim(line, "\n"))
+        }
+
+        errReader := bufio.NewReader(stderr)
+        for {
+            line, err := errReader.ReadString('\n')
+            if err != nil || io.EOF == err {
+                break
+            }
+            logger.Error(strings.Trim(line, "\n"))
         }
 
         if err := cmd.Wait(); nil != err {
