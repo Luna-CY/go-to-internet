@@ -5,4 +5,5 @@ const template = "server {\n" +
     "    server_name {host};\n" +
     "    location / {\n" +
     "        root /var/www/html;\n" +
-    "    }\n"
+    "    }\n" +
+    "}"

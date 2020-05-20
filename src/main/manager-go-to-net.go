@@ -38,6 +38,8 @@ func main() {
 
     acmeCmd.BoolVar(&acmeConfig.Install, "install", false, "安装acme工具")
     acmeCmd.BoolVar(&acmeConfig.Issue, "issue", false, "申请证书")
+    acmeCmd.BoolVar(&acmeConfig.Nginx, "nginx", false, "通过nginx验证服务器")
+    acmeCmd.BoolVar(&acmeConfig.Standalone, "standalone", false, "通过acme.sh的standalone模式验证服务器")
 
     acmeCmd.StringVar(&acmeConfig.Hostname, "hostname", "", "操作的域名")
 
