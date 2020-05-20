@@ -7,6 +7,7 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/command"
     "gitee.com/Luna-CY/go-to-internet/src/command/acme"
     "gitee.com/Luna-CY/go-to-internet/src/command/user"
+    "gitee.com/Luna-CY/go-to-internet/src/common"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "os"
 )
@@ -37,10 +38,13 @@ func main() {
 
     acmeCmd.BoolVar(&acmeConfig.Install, "install", false, "安装acme工具")
     acmeCmd.BoolVar(&acmeConfig.Issue, "issue", false, "申请证书")
+    acmeCmd.BoolVar(&acmeConfig.Nginx, "nginx", false, "通过nginx验证服务器")
+    acmeCmd.BoolVar(&acmeConfig.Standalone, "standalone", false, "通过acme.sh的standalone模式验证服务器")
 
     acmeCmd.StringVar(&acmeConfig.Hostname, "hostname", "", "操作的域名")
 
     if len(os.Args) < 2 || "-h" == os.Args[1] || "--help" == os.Args[1] {
+        _, _ = fmt.Fprintf(flag.CommandLine.Output(), "version %v\n", common.Version)
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "manager-go-to-net subcommand options")
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "")
         _, _ = fmt.Fprintln(flag.CommandLine.Output(), "sub commands:")

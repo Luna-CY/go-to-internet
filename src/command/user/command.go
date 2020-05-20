@@ -125,10 +125,10 @@ func (u *userCmd) exec() error {
         if "" != u.cmdInputConfig.Expired {
             expired = u.cmdInputConfig.Expired
         }
-        if -1 != u.cmdInputConfig.MaxRate {
+        if 0 < u.cmdInputConfig.MaxRate {
             maxRate = u.cmdInputConfig.MaxRate
         }
-        if -1 != u.cmdInputConfig.MaxConnection {
+        if 0 < u.cmdInputConfig.MaxConnection {
             maxConnection = u.cmdInputConfig.MaxConnection
         }
 
@@ -155,11 +155,11 @@ func (u *userCmd) exec() error {
             userInfo.Expired = u.cmdInputConfig.Expired
         }
 
-        if -1 != u.cmdInputConfig.MaxRate {
+        if 0 <= u.cmdInputConfig.MaxRate {
             userInfo.MaxRate = u.cmdInputConfig.MaxRate
         }
 
-        if -1 != u.cmdInputConfig.MaxConnection {
+        if 0 <= u.cmdInputConfig.MaxConnection {
             userInfo.MaxConnection = u.cmdInputConfig.MaxConnection
         }
 
