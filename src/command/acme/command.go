@@ -135,11 +135,12 @@ func checkAndInstallNginx() error {
             return errors.New("不支持的系统类型")
         }
 
-        if err := cmd.Run(); nil == err {
-            return nil
+        cmd = exec.Command("nginx", "-v")
+        if err := cmd.Run(); nil != err {
+            return errors.New(fmt.Sprintf("安装nginx服务器失败: %v", err))
         }
 
-        return errors.New("安装nginx服务器失败")
+        return nil
     }
 
     return errors.New("未安装nginx服务器")
