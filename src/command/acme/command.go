@@ -13,6 +13,7 @@ import (
     "os"
     "os/exec"
     "path"
+    "runtime"
     "strings"
 )
 
@@ -233,24 +234,34 @@ func generateNginxConfig(hostname string) error {
 
 // getOsType 获取文件系统类型
 func getOsType() (string, error) {
+    switch runtime.GOOS {
+    case "darwin":
+        return runtime.GOOS, nil
+    case "linux":
+        // ubuntu视为debian
+        if debian, err := utils.FileExists("/etc/debian_version"); nil != err || debian {
+            if debian {
+                return "debian", nil
+            }
 
-    if debian, err := utils.FileExists("/usr/bin/apt"); nil != err || debian {
-        if debian {
-            return "debian", nil
+            return "", err
         }
 
-        return "", err
-    }
+        // centos/fedora视为redhat
+        if centos, err := utils.FileExists("/etc/redhat-version"); nil != err || centos {
+            if centos {
+                return "centos", nil
+            }
 
-    if centos, err := utils.FileExists("/usr/bin/yum"); nil != err || centos {
-        if centos {
-            return "centos", nil
+            return "", err
         }
 
-        return "", err
+        return "unknown", nil
+    case "windows":
+        return runtime.GOOS, nil
+    default:
+        return "unknown", nil
     }
-
-    return "unknown", nil
 }
 
 // execCommand 执行命令
