@@ -26,7 +26,7 @@
 
 客户端：`go build src/main/cli-go-to-net`
 
-#### 使用说明
+#### 使用说明: 服务端
 
 一、 `ser-go-to-net`服务默认使用`/etc/go-to-net/users.josn`来管理用户配置，无需手动编辑该文件，`manager-go-to-net`工具对用户管理提供了支持
 
@@ -44,7 +44,17 @@
 
 三、 默认情况下`ser-go-to-net`命令能够根据域名查找`acme.sh`工具申请的证书，其默认路径一般在`/root/.acme.sh/YOUR_HOST`目录下，如果不使用默认规则，可以通过运行参数来指定证书位置，使用方式可以通过`ser-go-to-net -help`来获取
 
-#### 客户端项目
+- `ser-go-to-net -H YOUR_HOST`命令在启动时默认查找`/root/.acme.sh/YOUR_HOST/fullchain.cer`以及`/root/.acme.sh/YOUR_HOST/YOUR_HOST.key`两个文件
+- `ser-go-to-net -H YOUR_HOST -c /path/to/fullchain.cer -k /path/to/YOUR_HOST.key`命令在启动时使用指定的证书
+
+#### 使用说明: 客户端
+
+`cli-go-to-net`允许指定服务器域名、服务器端口、本地监听地址、本地监听端口、用户名、用户密码等
+
+- `cli-go-to-net -sh YOUR_HOST -u USERNAME -p PASSWORD`命令将在连接到服务器的`443`端口，并监听本地`127.0.0.1`的`1280`端口
+- `cli-go-to-net -sh YOUR_HOST -sp 4433 -la 0.0.0.0 -lp 1234 -u USERNAME -p PASSWORD`命令将连接到服务器的`4433`端口，并监听本地`0.0.0.0`的`1234`端口
+
+#### 客户端GUI项目
 
 - macos: [GoToNetUI-X](https://gitee.com/Luna-CY/GoToNetUI-X)
 - android: [GoToNetUI-A (开发中)](https://gitee.com/Luna-CY/GoToNetUI-A)
