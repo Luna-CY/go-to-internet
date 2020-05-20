@@ -22,80 +22,123 @@ func Exec(config *Config) error {
     case config.Install:
         home, err := os.UserHomeDir()
         if nil != err {
-            return err
+            logger.Error("无法获取用户主目录")
+
+            break
         }
         acmePath := path.Join(home, ".acme.sh")
 
         info, err := os.Stat(acmePath)
         if nil == err {
             if !info.IsDir() {
-                return errors.New(fmt.Sprintf("[%v]路径已存在并且不是一个目录", acmePath))
+                logger.Errorf("[%v]路径已存在并且不是一个目录", acmePath)
+
+                break
             }
 
             logger.Infof("已安装acme.sh工具，重新安装请删除[%v]目录后重新执行", acmePath)
 
-            return nil
+            break
         }
 
         if !os.IsNotExist(err) {
-            return errors.New(fmt.Sprintf("获取路径信息失败: %v", err))
+            logger.Errorf("获取路径信息失败: %v", err)
+
+            break
         }
 
         output := path.Join(os.TempDir(), "install-acme.sh")
 
         if err := download(common.AcmePath, output); nil != err {
-            return err
+            logger.Errorf("下载安装脚本失败: %v", err)
+
+            break
         }
 
         if err := os.Chmod(output, os.FileMode(0755)); nil != err {
-            return err
+            logger.Errorf("修改文件权限失败: %v", err)
+
+            break
         }
 
         if err := execCommand("sh", []string{"-c", output}, &[]string{"INSTALLONLINE=1"}, true); nil != err {
-            return err
+            logger.Errorf("安装acme.sh失败: %v", err)
+
+            break
         }
 
         if err := unix.Unlink(output); nil != err {
-            return errors.New(fmt.Sprintf("删除安装脚本失败: %v", err))
+            logger.Errorf("删除安装脚本失败: %v", err)
+
+            break
         }
 
         logger.Info("安装完成")
     case config.Issue:
         home, err := os.UserHomeDir()
         if nil != err {
-            return err
+            logger.Error("无法获取用户主目录")
+
+            break
         }
 
         command := path.Join(home, ".acme.sh", "acme.sh")
         info, err := os.Stat(command)
         if nil != err {
-            return errors.New(fmt.Sprintf("无法找到acme.sh工具: %v", err))
+            logger.Errorf("没有找到acme.sh工具: %v", err)
+
+            break
         }
 
         if info.IsDir() {
-            return errors.New("无法找到acme.sh工具")
+            logger.Error("无效的acme.sh工具路径")
+
+            break
         }
 
         switch {
         case config.Nginx:
             if err := checkAndInstallNginx(); nil != err {
-                return err
+                logger.Error(err)
+
+                break
             }
 
             if err := generateNginxConfig(config.Hostname); nil != err {
-                return errors.New(fmt.Sprintf("创建nginx配置失败: %v", err))
+                logger.Errorf("创建nginx配置失败: %v", err)
+
+                break
+            }
+
+            isExist, err := utils.FileExists(fmt.Sprintf("/root/.acme.sh/%v", config.Hostname))
+            if nil != err {
+                logger.Errorf("检查证书路径失败: %v", err)
+
+                break
+            }
+
+            if isExist {
+                logger.Info("该域名已存在证书")
+
+                break
             }
 
             if err := execCommand(command, []string{"--issue", "-d", config.Hostname, "--nginx"}, nil, true); nil != err {
-                return err
+                logger.Errorf("申请证书失败: %v", err)
+
+                break
             }
+
+            logger.Info("申请证书完成")
         default:
             if err := execCommand(command, []string{"--issue", "-d", config.Hostname, "--standalone"}, nil, true); nil != err {
-                return err
-            }
-        }
+                logger.Errorf("申请证书失败: %v", err)
 
-        logger.Info("申请证书完成")
+                break
+            }
+
+            logger.Info("申请证书完成")
+        }
     }
 
     return nil
