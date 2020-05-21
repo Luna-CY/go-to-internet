@@ -26,6 +26,10 @@
 
 客户端：`go build src/main/cli-go-to-net`
 
+#### 使用教程
+
+使用教程见[这里](https://blog.luna.xin/article/29.html)
+
 #### 使用说明: 服务端
 
 一、 `ser-go-to-net`服务默认使用`/etc/go-to-net/users.josn`来管理用户配置，无需手动编辑该文件，`manager-go-to-net`工具对用户管理提供了支持
