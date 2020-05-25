@@ -51,6 +51,7 @@ func (s *Socket) Start() {
 
 // connection 处理socket连接请求
 func (s *Socket) connection(src net.Conn) {
+    defer src.Close()
     if !s.isSocks5(src) || !s.authorize(src) {
         return
     }
@@ -70,7 +71,6 @@ func (s *Socket) connection(src net.Conn) {
 
     client, err := s.startTunnel(ipType, ip, port, s.Verbose)
     if nil != err {
-        defer src.Close()
         s.sendAck(src, 0x01)
 
         return
