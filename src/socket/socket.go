@@ -21,7 +21,7 @@ type Socket struct {
     Verbose bool // 详细模式
 }
 
-// Start 启动本地服务监听
+// Connect 启动本地服务监听
 func (s *Socket) Start() {
     if err := s.checkTunnel(); nil != err {
         logger.Error("无法连接服务器，请检查配置")

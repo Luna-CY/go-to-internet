@@ -13,16 +13,6 @@ import (
     "time"
 )
 
-// NewServer 新建一个隧道的服务端
-func NewServer(src net.Conn, userConfig *config.UserConfig, verbose bool) (*Server, error) {
-    server := &Server{clientConn: src, userConfig: userConfig, verbose: verbose}
-    if !server.checkConnection() {
-        return nil, errors.New("验证连接失败")
-    }
-
-    return server, nil
-}
-
 // Server 隧道的服务端结构体
 type Server struct {
     clientConn net.Conn
@@ -36,7 +26,7 @@ type Server struct {
     verbose bool
 }
 
-// Bind 双向绑定客户端以及目标服务器
+// bind 双向绑定客户端以及目标服务器
 func (s *Server) Bind() error {
     // 如果是验证连接的请求直接返回完成
     if CheckConnectTargetIp == s.dstIp && CheckConnectTargetPort == s.dstPort {
@@ -154,7 +144,7 @@ func (s *Server) receiveUserInfo() (string, string, error) {
         return "", "", errors.New("读取版本号失败")
     }
 
-    if Ver01 != ver[0] {
+    if Ver != ver[0] {
         return "", "", errors.New("不支持的协议版本")
     }
 
@@ -261,7 +251,7 @@ func (s *Server) parseTarget() error {
 func (s *Server) sendRes(code byte, message string) error {
     dataLength := 1 + 1 + 1 + len(message)
     data := make([]byte, dataLength)
-    data[0] = Ver01
+    data[0] = Ver
     data[1] = code
     data[2] = byte(len(message))
 

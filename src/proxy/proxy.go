@@ -3,26 +3,32 @@ package proxy
 import (
     "gitee.com/Luna-CY/go-to-internet/src/config"
     "gitee.com/Luna-CY/go-to-internet/src/http"
-    "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "net"
 )
 
-// StartConnection 开始一个连接处理
-func StartConnection(src net.Conn, serverConfig *Config, userConfig *config.UserConfig) {
-    server, err := tunnel.NewServer(src, userConfig, serverConfig.Verbose)
-    if nil != err {
-        if serverConfig.Verbose {
-            logger.Debugf("建立连接失败: %v", err)
-        }
+type Proxy struct {
+    UserConfig *config.UserConfig
+    Hostname   string
+    Verbose    bool
 
-        ns := http.MockNginx{Conn: src, Server: "nginx", BindHost: serverConfig.Hostname}
+    connections map[string][]*tunnel.Connection
+}
+
+// Init 初始化代理
+func (p *Proxy) Init() error {
+    return nil
+}
+
+// Accept 接收连接请求
+func (p *Proxy) Accept(client net.Conn) {
+    connection := &connection{Client: client}
+    if !connection.check(p.UserConfig) {
+        defer client.Close()
+
+        ns := http.MockNginx{Conn: client, Server: "nginx", BindHost: p.Hostname}
         ns.SendResponse()
 
         return
-    }
-
-    if err := server.Bind(); nil != err && serverConfig.Verbose {
-        logger.Errorf("绑定隧道失败: %v", err)
     }
 }

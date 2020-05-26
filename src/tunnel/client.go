@@ -44,13 +44,13 @@ func CheckServer(config *Config) error {
     return client.connect()
 }
 
-// Client 隧道的客户端结构体
+// client 隧道的客户端结构体
 type Client struct {
     serverConn net.Conn // 服务器连接
     config     *Config
 }
 
-// Bind 双向绑定服务端以及请求来源
+// bind 双向绑定服务端以及请求来源
 func (c *Client) Bind(src net.Conn) error {
     defer src.Close()
 
@@ -98,7 +98,7 @@ func (c *Client) sendConnectData() error {
     dataLength := userInfoLen + targetInfoLen
 
     data := make([]byte, dataLength)
-    data[0] = Ver01
+    data[0] = Ver
     data[1] = byte(len(c.config.ServerUsername))
 
     index := 2
@@ -154,7 +154,7 @@ func (c *Client) receive() (byte, string, error) {
         return 0xff, "", errors.New("读取应答版本号失败")
     }
 
-    if Ver01 != ver[0] {
+    if Ver != ver[0] {
         return 0xff, "", errors.New("不支持的协议版本")
     }
 
