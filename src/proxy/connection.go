@@ -15,25 +15,25 @@ type connection struct {
 
     username string
     userInfo *config.UserInfo
-    protocol *tunnel.Protocol
+    protocol *tunnel.HandshakeProtocol
 }
 
 // check 检查连接
 func (c *connection) check(userConfig *config.UserConfig) bool {
-    protocol := &tunnel.Protocol{Conn: c.Client}
-    if err := protocol.Receive(); nil != err {
+    protocol := &tunnel.HandshakeProtocol{Conn: c.Client}
+    if err := protocol.ReceiveC(); nil != err {
         return false
     }
 
-    userInfo, ok := userConfig.Users[protocol.GetUsername()]
+    userInfo, ok := userConfig.Users[protocol.Username]
     if !ok {
         return false
     }
-    c.username = protocol.GetUsername()
+    c.username = protocol.Username
     c.userInfo = userInfo
 
     // 检查用户密码
-    if err := bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(protocol.GetPassword())); nil != err {
+    if err := bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(protocol.Password)); nil != err {
         return false
     }
 

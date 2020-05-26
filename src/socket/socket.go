@@ -23,12 +23,6 @@ type Socket struct {
 
 // Connect 启动本地服务监听
 func (s *Socket) Start() {
-    if err := s.checkTunnel(); nil != err {
-        logger.Error("无法连接服务器，请检查配置")
-
-        return
-    }
-
     logger.Infof("启动监听 %v:%d ...\n", s.LocalAddr, s.LocalPort)
 
     listen, err := net.Listen("tcp", fmt.Sprintf("%v:%d", s.LocalAddr, s.LocalPort))
@@ -39,17 +33,24 @@ func (s *Socket) Start() {
     }
     defer listen.Close()
 
+    client := &client{Socket: s}
+    if err := client.Init(); nil != err {
+        logger.Errorf("初始化代理客户端失败: %v", err)
+
+        return
+    }
+
     for {
         conn, err := listen.Accept()
         if nil != err {
             continue
         }
 
-        go s.connection(conn)
+        go client.Accept(conn)
     }
 }
 
-// connection 处理socket连接请求
+// Connection 处理socket连接请求
 func (s *Socket) connection(src net.Conn) {
     defer src.Close()
     if !s.isSocks5(src) || !s.authorize(src) {

@@ -75,9 +75,9 @@ func (c *Client) connect() error {
             return err
         }
 
-        if Success == code {
+        if CodeSuccess == code {
             break
-        } else if ConnectionUpperLimit == code {
+        } else if CodeConnectionUpperLimit == code {
             time.Sleep(1 * time.Second)
 
             continue
@@ -98,7 +98,7 @@ func (c *Client) sendConnectData() error {
     dataLength := userInfoLen + targetInfoLen
 
     data := make([]byte, dataLength)
-    data[0] = Ver
+    data[0] = HandshakeProtocolVersion
     data[1] = byte(len(c.config.ServerUsername))
 
     index := 2
@@ -154,7 +154,7 @@ func (c *Client) receive() (byte, string, error) {
         return 0xff, "", errors.New("读取应答版本号失败")
     }
 
-    if Ver != ver[0] {
+    if HandshakeProtocolVersion != ver[0] {
         return 0xff, "", errors.New("不支持的协议版本")
     }
 
