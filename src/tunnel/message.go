@@ -8,7 +8,7 @@ import (
 
 // NewConnectMessage 建立一个新的连接消息
 func NewConnectMessage(conn net.Conn, ipType byte, dstIp string, dstPort int) *MessageProtocol {
-    return &MessageProtocol{Conn: conn, Cmd: CmdNewConnect, Code: MessageCodeNotSet, IpType: ipType, DstIp: dstIp, DstPort: dstPort, Data: make([]byte, 0)}
+    return &MessageProtocol{Conn: conn, Cmd: CmdNewConnect, Code: MessageCodeNotSet, IpType: ipType, DstIp: dstIp, DstPort: dstPort}
 }
 
 // NewDataMessage 建立一个新的数据消息
@@ -16,9 +16,14 @@ func NewDataMessage(conn net.Conn, data []byte) *MessageProtocol {
     return &MessageProtocol{Conn: conn, Cmd: CmdData, Code: MessageCodeNotSet, Data: data}
 }
 
-// NewEmptyMessage 建立一个空消息，用于接收对端发送的消息
+// NewCloseMessage 建立一个结束消息
+func NewCloseMessage(conn net.Conn) *MessageProtocol {
+    return &MessageProtocol{Conn: conn, Cmd: CmdClose, Code: MessageCodeNotSet}
+}
+
+// NewEmptyMessage 建立一个空消息
 func NewEmptyMessage(conn net.Conn) *MessageProtocol {
-    return &MessageProtocol{Conn: conn}
+    return &MessageProtocol{Conn: conn, Code: MessageCodeNotSet}
 }
 
 // MessageProtocol 消息协议
@@ -128,6 +133,6 @@ func (m *MessageProtocol) getData() []byte {
 
         return data
     default:
-        return m.Data
+        return make([]byte, 0)
     }
 }

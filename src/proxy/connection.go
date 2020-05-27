@@ -4,28 +4,26 @@ import (
     "context"
     "gitee.com/Luna-CY/go-to-internet/src/common"
     "gitee.com/Luna-CY/go-to-internet/src/config"
+    "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "gitee.com/Luna-CY/go-to-internet/src/utils"
     "golang.org/x/crypto/bcrypt"
     "golang.org/x/time/rate"
-    "io"
     "net"
-    "sync"
     "time"
 )
 
-// Connection 客户端与服务器的连接结构
+// Connection 服务器的连接结构
 type Connection struct {
     IsRunning bool
     Limiter   *rate.Limiter
     Tunnel    net.Conn
 
-    username string
-    userInfo *config.UserInfo
-    protocol *tunnel.HandshakeProtocol
+    Username string
+    UserInfo *config.UserInfo
+    Protocol *tunnel.HandshakeProtocol
 
-    ctx   context.Context
-    mutex sync.Mutex
+    ctx context.Context
 }
 
 // check 检查连接
@@ -39,8 +37,8 @@ func (c *Connection) check(userConfig *config.UserConfig) bool {
     if !ok {
         return false
     }
-    c.username = protocol.Username
-    c.userInfo = userInfo
+    c.Username = protocol.Username
+    c.UserInfo = userInfo
 
     // 检查用户密码
     if err := bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(protocol.Password)); nil != err {
@@ -54,31 +52,31 @@ func (c *Connection) check(userConfig *config.UserConfig) bool {
             return false
         }
 
-        if expired.After(time.Now()) {
+        if expired.Before(time.Now()) {
             return false
         }
     }
-    c.protocol = protocol
+    c.Protocol = protocol
 
     return true
 }
 
-// send 发送消息
-func (c *Connection) send(code byte) error {
-    return c.protocol.Send(code)
+func (c *Connection) Accept() {
+    for {
+        message := tunnel.NewEmptyMessage(c.Tunnel)
+        if err := message.Receive(); nil != err {
+            logger.Errorf("接收消息失败: %v", err)
+
+            continue
+        }
+
+
+    }
 }
 
-// Init 初始化隧道
-func (c *Connection) Init() error {
-    c.mutex.Lock()
-    c.IsRunning = true
-    c.ctx = context.Background()
-
-    if _, err := c.Tunnel.Read(make([]byte, 0)); nil != err {
-        return err
-    }
-
-    return nil
+// Send 发送消息
+func (c *Connection) Send(code byte) error {
+    return c.Protocol.Send(code)
 }
 
 // Connect 连接隧道
@@ -112,7 +110,7 @@ func (c *Connection) Connect(dst net.Conn) error {
 }
 
 // bind 绑定一个reader和writer
-func (c *Connection) bind(reader io.Reader, writer io.Writer) chan error {
+func (c *Connection) bind(reader net.Conn, writer net.Conn) chan error {
     ch := make(chan error)
 
     go func() {
@@ -145,11 +143,4 @@ func (c *Connection) bind(reader io.Reader, writer io.Writer) chan error {
     }()
 
     return ch
-}
-
-// 重置隧道
-func (c *Connection) Reset() {
-    c.mutex.Unlock()
-    c.IsRunning = false
-    c.ctx = nil
 }

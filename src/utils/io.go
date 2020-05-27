@@ -16,17 +16,27 @@ func CopyLimiterWithCtxToMessageProtocol(ctx context.Context, reader net.Conn, w
     ch := make(chan error)
 
     go func() {
-        buf := make([]byte, limiter.Burst())
+        var length int
+
+        if nil != limiter {
+            length = limiter.Burst()
+        } else {
+            length = 1024
+        }
+
+        buf := make([]byte, length)
 
         for {
             select {
             case <-ctx.Done():
                 return
             default:
-                if !limiter.AllowN(time.Now(), limiter.Burst()) {
-                    ch <- nil
+                if nil != limiter {
+                    if !limiter.AllowN(time.Now(), limiter.Burst()) {
+                        ch <- nil
 
-                    continue
+                        continue
+                    }
                 }
 
                 nr, er := reader.Read(buf)
@@ -58,8 +68,9 @@ func CopyLimiterWithCtxToMessageProtocol(ctx context.Context, reader net.Conn, w
 }
 
 // CopyWithCtxFromMessageProtocol 基于context的Copy
-func CopyWithCtxFromMessageProtocol(ctx context.Context, reader net.Conn, writer net.Conn) chan error {
+func CopyWithCtxFromMessageProtocol(ctx context.Context, reader net.Conn, writer net.Conn) (chan error, chan *tunnel.MessageProtocol) {
     ch := make(chan error)
+    chm := make(chan *tunnel.MessageProtocol)
 
     go func() {
         for {
@@ -74,7 +85,14 @@ func CopyWithCtxFromMessageProtocol(ctx context.Context, reader net.Conn, writer
                     return
                 }
 
-                if tunnel.CmdData != message.Cmd || tunnel.MessageCodeSuccess != message.Code {
+                // 如果不是数据指令，那么返回这个消息
+                if tunnel.CmdData != message.Cmd {
+                    chm <- message
+
+                    return
+                }
+
+                if tunnel.MessageCodeSuccess != message.Code {
                     ch <- errors.New(fmt.Sprintf("接收连接消息失败. 响应指令: %v 响应码: %v", message.Cmd, message.Code))
 
                     return
@@ -98,5 +116,5 @@ func CopyWithCtxFromMessageProtocol(ctx context.Context, reader net.Conn, writer
         }
     }()
 
-    return ch
+    return ch, chm
 }

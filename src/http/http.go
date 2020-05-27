@@ -9,7 +9,7 @@ import (
     "time"
 )
 
-var startTimestamp time.Time = time.Now()
+var startTimestamp = time.Now()
 
 // MockNginx MockNginx结构体
 type MockNginx struct {
@@ -22,8 +22,6 @@ type MockNginx struct {
 
 // SendResponse 发送HTTP响应
 func (m *MockNginx) SendResponse() {
-    defer m.Conn.Close()
-
     reader := bufio.NewReader(m.Conn)
     line, _, err := reader.ReadLine()
     if nil != err {

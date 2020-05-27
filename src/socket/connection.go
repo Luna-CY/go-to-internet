@@ -4,31 +4,27 @@ import (
     "context"
     "errors"
     "fmt"
+    "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "gitee.com/Luna-CY/go-to-internet/src/utils"
     "net"
-    "sync"
     "time"
 )
 
 // Connection 隧道连接结构
 type Connection struct {
     IsRunning bool
+    IsClosed  bool
     Tunnel    net.Conn
 
-    ctx   context.Context
-    mutex sync.Mutex
-}
-
-// Lock 锁定当前隧道
-func (c *Connection) Lock() {
-    c.mutex.Lock()
-    c.IsRunning = true
+    ctx    context.Context
+    cancel context.CancelFunc
 }
 
 // Init 初始化隧道
 func (c *Connection) Init() error {
-    c.ctx = context.Background()
+    c.IsRunning = true
+    c.ctx, c.cancel = context.WithCancel(context.Background())
 
     if _, err := c.Tunnel.Write(make([]byte, 0)); nil != err {
         return err
@@ -58,26 +54,32 @@ func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort in
     defer close(ch2)
 
     over := 0
+    for {
+        select {
+        case err := <-ch1:
+            if nil != err {
+                c.cancel()
+                c.Close()
 
-    select {
-    case err := <-ch1:
-        if nil != err {
-            return err
-        }
-        over += 1
-    case err := <-ch2:
-        if nil != err {
-            return err
-        }
+                return err
+            }
 
-        over += 1
-    default:
-        if over == 2 {
-            break
+            over += 1
+        case err := <-ch2:
+            if nil != err {
+                c.cancel()
+                c.Close()
+
+                return err
+            }
+
+            over += 1
+        default:
+            if over == 2 {
+                return nil
+            }
         }
     }
-
-    return nil
 }
 
 // bindFromMessage 绑定一个reader和writer
@@ -85,38 +87,40 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
     ch := make(chan error)
 
     go func() {
-        res := utils.CopyWithCtxFromMessageProtocol(c.ctx, reader, writer)
+        res, message := utils.CopyWithCtxFromMessageProtocol(c.ctx, reader, writer)
         defer close(res)
+        defer close(message)
 
-        timer := time.NewTimer(1 * time.Second)
-        select {
-        case err := <-res:
-            if nil != err {
-                timer.Stop()
+        for {
+            select {
+            case err := <-res:
+                if nil != err {
+                    c.sendCloseMessage()
+                    ch <- err
 
-                ch <- err
+                    return
+                }
+            case msg := <-message:
+                if tunnel.CmdClose != msg.Cmd {
+                    c.sendCloseMessage()
+                    ch <- errors.New(fmt.Sprintf("不支持的消息指令: %v", msg.Cmd))
+
+                    return
+                }
+
+                return
+            case <-c.ctx.Done():
+                c.sendCloseMessage()
 
                 return
             }
-
-            timer.Reset(1 * time.Second)
-        case <-timer.C:
-            timer.Stop()
-
-            ch <- nil
-
-            return
-        case <-c.ctx.Done():
-            timer.Stop()
-
-            return
         }
     }()
 
     return ch
 }
 
-// bindFromMessage 绑定一个reader和writer
+// bindToMessage 绑定一个reader和writer
 func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error {
     ch := make(chan error)
 
@@ -125,36 +129,53 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
         defer close(res)
 
         timer := time.NewTimer(1 * time.Second)
-        select {
-        case err := <-res:
-            if nil != err {
-                timer.Stop()
+        for {
+            select {
+            case err := <-res:
+                if nil != err {
+                    timer.Stop()
+                    c.sendCloseMessage()
 
-                ch <- err
+                    ch <- err
+
+                    return
+                }
+
+                timer.Reset(1 * time.Second)
+            case <-timer.C:
+                timer.Stop()
+                c.sendCloseMessage()
+
+                ch <- nil
+
+                return
+            case <-c.ctx.Done():
+                timer.Stop()
+                c.sendCloseMessage()
 
                 return
             }
-
-            timer.Reset(1 * time.Second)
-        case <-timer.C:
-            timer.Stop()
-
-            ch <- nil
-
-            return
-        case <-c.ctx.Done():
-            timer.Stop()
-
-            return
         }
     }()
 
     return ch
 }
 
-// Close 重置隧道
-func (c *Connection) Close() {
-    c.mutex.Unlock()
+// sendCloseMessage 发送结束消息
+func (c *Connection) sendCloseMessage() {
+    if err := tunnel.NewCloseMessage(c.Tunnel).Send(); nil != err {
+        logger.Errorf("发送结束消息失败: %v", err)
+    }
+}
+
+// Reset 重置隧道
+func (c *Connection) Reset() {
     c.IsRunning = false
     c.ctx = nil
+}
+
+// Close 关闭隧道
+func (c *Connection) Close() {
+    c.Tunnel.Close()
+    c.IsClosed = true
 }

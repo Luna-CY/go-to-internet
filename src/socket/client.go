@@ -7,6 +7,7 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "net"
+    "runtime"
     "sync"
     "time"
 )
@@ -37,7 +38,7 @@ func (c *client) Accept(src net.Conn) {
 
         return
     }
-    defer connection.Close()
+    defer connection.Reset()
 
     ipType, ip, port, err := c.Socket.getRemoteAddr(src)
     if nil != err {
@@ -49,6 +50,8 @@ func (c *client) Accept(src net.Conn) {
     if err := connection.Connect(src, ipType, ip, port); nil != err {
         logger.Errorf("处理请求失败: %v", err)
     }
+
+    runtime.GC()
 }
 
 // getConnection 获取一个可用的隧道连接
@@ -56,12 +59,23 @@ func (c *client) getConnection() (*Connection, error) {
     c.mutex.Lock()
 
     for {
-        for _, conn := range c.connections {
+        for n, conn := range c.connections {
             if conn.IsRunning {
                 continue
             }
 
-            conn.Lock()
+            if conn.IsClosed {
+                c.connections = append(c.connections[:n], c.connections[n+1:]...)
+
+                continue
+            }
+
+            if err := conn.Init(); nil != err {
+                conn.Close()
+                c.connections = append(c.connections[:n], c.connections[n+1:]...)
+
+                continue
+            }
             c.mutex.Unlock()
 
             return conn, nil
@@ -75,8 +89,6 @@ func (c *client) getConnection() (*Connection, error) {
 
             if nil != conn {
                 c.connections = append(c.connections, conn)
-
-                conn.Lock()
                 c.mutex.Unlock()
 
                 return conn, nil
