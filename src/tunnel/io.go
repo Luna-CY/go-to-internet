@@ -2,8 +2,6 @@ package tunnel
 
 import (
     "context"
-    "errors"
-    "fmt"
     "golang.org/x/time/rate"
     "io"
     "net"
@@ -87,12 +85,6 @@ func CopyWithCtxFromMessageProtocol(ctx context.Context, reader net.Conn, writer
                 // 如果不是数据指令，那么返回这个消息
                 if CmdData != message.Cmd {
                     chm <- message
-
-                    return
-                }
-
-                if MessageCodeSuccess != message.Code {
-                    ch <- errors.New(fmt.Sprintf("接收连接消息失败. 响应指令: %v 响应码: %v", message.Cmd, message.Code))
 
                     return
                 }

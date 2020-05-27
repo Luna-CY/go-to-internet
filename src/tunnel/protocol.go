@@ -13,4 +13,4 @@ package tunnel
 // 通信协议
 //
 // VER CMD CODE DATA_L DATA
-//  1   1   1     1     N
+//  1   1   1     2     N

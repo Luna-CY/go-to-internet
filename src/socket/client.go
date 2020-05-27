@@ -29,7 +29,7 @@ func (c *client) Init() error {
 }
 
 // Accept 接收连接请求
-func (c *client) Accept(src net.Conn) {
+func (c *client) Accept(src net.Conn, ipType byte, ip string, port int) {
     defer src.Close()
 
     connection, err := c.getConnection()
@@ -39,13 +39,6 @@ func (c *client) Accept(src net.Conn) {
         return
     }
     defer connection.Reset()
-
-    ipType, ip, port, err := c.Socket.getRemoteAddr(src)
-    if nil != err {
-        logger.Errorf("解析目标服务器失败: %v", err)
-
-        return
-    }
 
     if err := connection.Connect(src, ipType, ip, port); nil != err {
         logger.Errorf("处理请求失败: %v", err)
@@ -88,10 +81,13 @@ func (c *client) getConnection() (*Connection, error) {
             }
 
             if nil != conn {
-                c.connections = append(c.connections, conn)
-                c.mutex.Unlock()
+                if err := conn.Init(); nil == err {
+                    c.connections = append(c.connections, conn)
+                    c.mutex.Unlock()
 
-                return conn, nil
+                    return conn, nil
+                }
+                conn.Close()
             }
         }
 

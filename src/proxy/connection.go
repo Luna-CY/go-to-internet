@@ -74,7 +74,7 @@ func (c *Connection) Accept() {
                 logger.Errorf("接收消息失败: %v", err)
             }
 
-            continue
+            return
         }
 
         if tunnel.CmdNewConnect != message.Cmd {
@@ -82,12 +82,15 @@ func (c *Connection) Accept() {
                 logger.Errorf("不接受的指令: %v", message.Cmd)
             }
 
-            continue
+            return
+        }
+
+        if c.Verbose {
+            logger.Error("新的目标连接请求")
         }
 
         if err := message.ParseDst(); nil != err {
             if c.Verbose {
-                logger.Errorf("%v : %v : %v", message.IpType, message.DstIp, message.DstPort)
                 logger.Errorf("解析目标数据失败: %v", err)
             }
 
@@ -95,9 +98,8 @@ func (c *Connection) Accept() {
                 logger.Errorf("发送结束消息失败: %v", err)
             }
 
-            continue
+            return
         }
-        logger.Errorf("%v : %v : %v", message.IpType, message.DstIp, message.DstPort)
 
         dst, err := net.Dial("tcp", fmt.Sprintf("%v:%d", message.DstIp, message.DstPort))
         if nil != err {
@@ -105,7 +107,7 @@ func (c *Connection) Accept() {
                 logger.Errorf("发送结束消息失败: %v", err)
             }
 
-            continue
+            return
         }
 
         message.Code = tunnel.MessageCodeSuccess
@@ -114,7 +116,7 @@ func (c *Connection) Accept() {
                 logger.Errorf("发送结束消息失败: %v", err)
             }
 
-            continue
+            return
         }
 
         c.ctx, c.cancel = context.WithCancel(context.Background())
@@ -136,9 +138,7 @@ func (c *Connection) Send(code byte) error {
 // bind 连接隧道
 func (c *Connection) bind(dst net.Conn) error {
     ch1 := c.bindFromMessage(c.Tunnel, dst)
-    defer close(ch1)
     ch2 := c.bindToMessage(dst, c.Tunnel)
-    defer close(ch2)
 
     over := 0
     for {
@@ -173,8 +173,6 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
 
     go func() {
         res, message := tunnel.CopyWithCtxFromMessageProtocol(c.ctx, reader, writer)
-        defer close(res)
-        defer close(message)
 
         for {
             select {
@@ -212,7 +210,6 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
         }
 
         res := tunnel.CopyLimiterWithCtxToMessageProtocol(c.ctx, reader, writer, limiter)
-        defer close(res)
 
         timer := time.NewTimer(3 * time.Second)
         for {

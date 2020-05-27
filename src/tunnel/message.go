@@ -42,15 +42,22 @@ type MessageProtocol struct {
 // Send 发送消息
 func (m *MessageProtocol) Send() error {
     sendData := m.getData()
-    dataLength := 1 + 1 + 1 + 1 + len(sendData)
+    dataLength := 1 + 1 + 1 + 1 + 1 + len(sendData)
 
     data := make([]byte, dataLength)
     data[0] = MessageProtocolVersion
     data[1] = m.Cmd
     data[2] = m.Code
-    data[3] = byte(len(sendData))
 
-    index := 4
+    dl := make([]byte, 2)
+    binary.BigEndian.PutUint16(dl, uint16(len(sendData)))
+
+    index := 3
+    for _, d := range dl {
+        data[index] = d
+        index++
+    }
+
     for _, d := range sendData {
         data[index] = d
         index++
@@ -90,15 +97,16 @@ func (m *MessageProtocol) Receive() error {
     }
     m.Code = code[0]
 
-    dataLen := make([]byte, 1)
+    dataLen := make([]byte, 2)
     n, err = m.Conn.Read(dataLen)
-    if n != 1 || nil != err {
+    if n != 2 || nil != err {
         return errors.New("读取数据长度失败")
     }
 
-    data := make([]byte, dataLen[0])
+    dl := int(dataLen[0])<<8 | int(dataLen[1])
+    data := make([]byte, dl)
     n, err = m.Conn.Read(data)
-    if n != int(dataLen[0]) || nil != err {
+    if n != dl || nil != err {
         return errors.New("读取数据失败")
     }
     m.Data = data
@@ -108,11 +116,11 @@ func (m *MessageProtocol) Receive() error {
 
 // ParseDst 从data中解析目标信息
 func (m *MessageProtocol) ParseDst() error {
-    ipType := m.Data[0]
+    m.IpType = m.Data[0]
 
     m.DstPort = int(m.Data[1])<<8 | int(m.Data[2])
 
-    switch ipType {
+    switch m.IpType {
     case 0x01:
         m.DstIp = string(m.Data[3:])
     case 0x03:
@@ -155,6 +163,8 @@ func (m *MessageProtocol) getData() []byte {
         }
 
         return data
+    case CmdData:
+        return m.Data
     default:
         return make([]byte, 0)
     }

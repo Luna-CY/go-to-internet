@@ -19,6 +19,8 @@ type Socket struct {
     Password string // 身份认证密码
 
     Verbose bool // 详细模式
+
+    client *client
 }
 
 // Start 启动本地服务监听
@@ -33,8 +35,8 @@ func (s *Socket) Start() {
     }
     defer listen.Close()
 
-    client := &client{Socket: s}
-    if err := client.Init(); nil != err {
+    s.client = &client{Socket: s}
+    if err := s.client.Init(); nil != err {
         logger.Errorf("初始化代理客户端失败: %v", err)
 
         return
@@ -46,8 +48,32 @@ func (s *Socket) Start() {
             continue
         }
 
-        go client.Accept(conn)
+        go s.connection(conn)
     }
+}
+
+// Connection 处理socket连接请求
+func (s *Socket) connection(src net.Conn) {
+    defer src.Close()
+    if !s.isSocks5(src) || !s.authorize(src) {
+        return
+    }
+
+    if !s.isConnectCmd(src) {
+        _, _ = src.Write([]byte{0x05, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+
+        return
+    }
+
+    ipType, ip, port, err := s.getRemoteAddr(src)
+    if nil != err {
+        _, _ = src.Write([]byte{0x05, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+
+        return
+    }
+    s.sendAck(src, 0x00)
+
+    s.client.Accept(src, ipType, ip, port)
 }
 
 // isSocks5 检查连接是否是socks5协议

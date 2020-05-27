@@ -34,7 +34,6 @@ func (c *Connection) Init() error {
 
 // bind 连接隧道
 func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort int) error {
-    logger.Errorf("%v : %v : %v", ipType, dstIp, dstPort)
     connect := tunnel.NewConnectMessage(c.Tunnel, ipType, dstIp, dstPort)
     if err := connect.Send(); nil != err {
         return errors.New(fmt.Sprintf("发送连接消息失败: %v", err))
@@ -49,9 +48,7 @@ func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort in
     }
 
     ch1 := c.bindFromMessage(c.Tunnel, src)
-    defer close(ch1)
     ch2 := c.bindToMessage(src, c.Tunnel)
-    defer close(ch2)
 
     over := 0
     for {
@@ -88,8 +85,6 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
 
     go func() {
         res, message := tunnel.CopyWithCtxFromMessageProtocol(c.ctx, reader, writer)
-        defer close(res)
-        defer close(message)
 
         for {
             select {
@@ -126,7 +121,6 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
 
     go func() {
         res := tunnel.CopyLimiterWithCtxToMessageProtocol(c.ctx, reader, writer, nil)
-        defer close(res)
 
         timer := time.NewTimer(1 * time.Second)
         for {
