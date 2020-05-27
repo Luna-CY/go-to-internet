@@ -1,10 +1,9 @@
-package utils
+package tunnel
 
 import (
     "context"
     "errors"
     "fmt"
-    "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "golang.org/x/time/rate"
     "io"
     "net"
@@ -52,7 +51,7 @@ func CopyLimiterWithCtxToMessageProtocol(ctx context.Context, reader net.Conn, w
                     return
                 }
 
-                message := tunnel.NewDataMessage(writer, buf[0:nr])
+                message := NewDataMessage(writer, buf[0:nr])
                 if ew := message.Send(); nil != ew {
                     ch <- ew
 
@@ -68,9 +67,9 @@ func CopyLimiterWithCtxToMessageProtocol(ctx context.Context, reader net.Conn, w
 }
 
 // CopyWithCtxFromMessageProtocol 基于context的Copy
-func CopyWithCtxFromMessageProtocol(ctx context.Context, reader net.Conn, writer net.Conn) (chan error, chan *tunnel.MessageProtocol) {
+func CopyWithCtxFromMessageProtocol(ctx context.Context, reader net.Conn, writer net.Conn) (chan error, chan *MessageProtocol) {
     ch := make(chan error)
-    chm := make(chan *tunnel.MessageProtocol)
+    chm := make(chan *MessageProtocol)
 
     go func() {
         for {
@@ -78,7 +77,7 @@ func CopyWithCtxFromMessageProtocol(ctx context.Context, reader net.Conn, writer
             case <-ctx.Done():
                 return
             default:
-                message := tunnel.NewEmptyMessage(reader)
+                message := NewEmptyMessage(reader)
                 if er := message.Receive(); nil != er {
                     ch <- er
 
@@ -86,13 +85,13 @@ func CopyWithCtxFromMessageProtocol(ctx context.Context, reader net.Conn, writer
                 }
 
                 // 如果不是数据指令，那么返回这个消息
-                if tunnel.CmdData != message.Cmd {
+                if CmdData != message.Cmd {
                     chm <- message
 
                     return
                 }
 
-                if tunnel.MessageCodeSuccess != message.Code {
+                if MessageCodeSuccess != message.Code {
                     ch <- errors.New(fmt.Sprintf("接收连接消息失败. 响应指令: %v 响应码: %v", message.Cmd, message.Code))
 
                     return

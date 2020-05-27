@@ -21,7 +21,7 @@ type Socket struct {
     Verbose bool // 详细模式
 }
 
-// Connect 启动本地服务监听
+// Start 启动本地服务监听
 func (s *Socket) Start() {
     logger.Infof("启动监听 %v:%d ...\n", s.LocalAddr, s.LocalPort)
 

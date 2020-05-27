@@ -6,7 +6,6 @@ import (
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
-    "gitee.com/Luna-CY/go-to-internet/src/utils"
     "net"
     "time"
 )
@@ -33,8 +32,9 @@ func (c *Connection) Init() error {
     return nil
 }
 
-// Connect 连接隧道
+// bind 连接隧道
 func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort int) error {
+    logger.Errorf("%v : %v : %v", ipType, dstIp, dstPort)
     connect := tunnel.NewConnectMessage(c.Tunnel, ipType, dstIp, dstPort)
     if err := connect.Send(); nil != err {
         return errors.New(fmt.Sprintf("发送连接消息失败: %v", err))
@@ -45,7 +45,7 @@ func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort in
     }
 
     if tunnel.CmdNewConnect != connect.Cmd || tunnel.MessageCodeSuccess != connect.Code {
-        return errors.New(fmt.Sprintf("接收连接消息失败. 响应指令: %v 响应码: %v", connect.Cmd, connect.Code))
+        return errors.New(fmt.Sprintf("建立连接失败. 响应指令: %v 响应码: %v", connect.Cmd, connect.Code))
     }
 
     ch1 := c.bindFromMessage(c.Tunnel, src)
@@ -87,7 +87,7 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
     ch := make(chan error)
 
     go func() {
-        res, message := utils.CopyWithCtxFromMessageProtocol(c.ctx, reader, writer)
+        res, message := tunnel.CopyWithCtxFromMessageProtocol(c.ctx, reader, writer)
         defer close(res)
         defer close(message)
 
@@ -95,14 +95,14 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
             select {
             case err := <-res:
                 if nil != err {
-                    c.sendCloseMessage()
+                    c.sendOverMessage()
                     ch <- err
 
                     return
                 }
             case msg := <-message:
-                if tunnel.CmdClose != msg.Cmd {
-                    c.sendCloseMessage()
+                if tunnel.CmdOver != msg.Cmd {
+                    c.sendOverMessage()
                     ch <- errors.New(fmt.Sprintf("不支持的消息指令: %v", msg.Cmd))
 
                     return
@@ -110,7 +110,7 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
 
                 return
             case <-c.ctx.Done():
-                c.sendCloseMessage()
+                c.sendOverMessage()
 
                 return
             }
@@ -125,7 +125,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
     ch := make(chan error)
 
     go func() {
-        res := utils.CopyLimiterWithCtxToMessageProtocol(c.ctx, reader, writer, nil)
+        res := tunnel.CopyLimiterWithCtxToMessageProtocol(c.ctx, reader, writer, nil)
         defer close(res)
 
         timer := time.NewTimer(1 * time.Second)
@@ -134,7 +134,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
             case err := <-res:
                 if nil != err {
                     timer.Stop()
-                    c.sendCloseMessage()
+                    c.sendOverMessage()
 
                     ch <- err
 
@@ -144,14 +144,14 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
                 timer.Reset(1 * time.Second)
             case <-timer.C:
                 timer.Stop()
-                c.sendCloseMessage()
+                c.sendOverMessage()
 
                 ch <- nil
 
                 return
             case <-c.ctx.Done():
                 timer.Stop()
-                c.sendCloseMessage()
+                c.sendOverMessage()
 
                 return
             }
@@ -161,9 +161,9 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
     return ch
 }
 
-// sendCloseMessage 发送结束消息
-func (c *Connection) sendCloseMessage() {
-    if err := tunnel.NewCloseMessage(c.Tunnel).Send(); nil != err {
+// sendOverMessage 发送结束消息
+func (c *Connection) sendOverMessage() {
+    if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err {
         logger.Errorf("发送结束消息失败: %v", err)
     }
 }

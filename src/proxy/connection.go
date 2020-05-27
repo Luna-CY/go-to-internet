@@ -2,11 +2,12 @@ package proxy
 
 import (
     "context"
+    "errors"
+    "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/common"
     "gitee.com/Luna-CY/go-to-internet/src/config"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
-    "gitee.com/Luna-CY/go-to-internet/src/utils"
     "golang.org/x/crypto/bcrypt"
     "golang.org/x/time/rate"
     "net"
@@ -23,7 +24,10 @@ type Connection struct {
     UserInfo *config.UserInfo
     Protocol *tunnel.HandshakeProtocol
 
-    ctx context.Context
+    Verbose bool
+
+    ctx    context.Context
+    cancel context.CancelFunc
 }
 
 // check 检查连接
@@ -61,16 +65,66 @@ func (c *Connection) check(userConfig *config.UserConfig) bool {
     return true
 }
 
+// Accept 接收连接请求并处理
 func (c *Connection) Accept() {
     for {
         message := tunnel.NewEmptyMessage(c.Tunnel)
         if err := message.Receive(); nil != err {
-            logger.Errorf("接收消息失败: %v", err)
+            if c.Verbose {
+                logger.Errorf("接收消息失败: %v", err)
+            }
 
             continue
         }
 
+        if tunnel.CmdNewConnect != message.Cmd {
+            if c.Verbose {
+                logger.Errorf("不接受的指令: %v", message.Cmd)
+            }
 
+            continue
+        }
+
+        if err := message.ParseDst(); nil != err {
+            if c.Verbose {
+                logger.Errorf("%v : %v : %v", message.IpType, message.DstIp, message.DstPort)
+                logger.Errorf("解析目标数据失败: %v", err)
+            }
+
+            if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
+                logger.Errorf("发送结束消息失败: %v", err)
+            }
+
+            continue
+        }
+        logger.Errorf("%v : %v : %v", message.IpType, message.DstIp, message.DstPort)
+
+        dst, err := net.Dial("tcp", fmt.Sprintf("%v:%d", message.DstIp, message.DstPort))
+        if nil != err {
+            if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
+                logger.Errorf("发送结束消息失败: %v", err)
+            }
+
+            continue
+        }
+
+        message.Code = tunnel.MessageCodeSuccess
+        if err := message.Send(); nil != err {
+            if c.Verbose {
+                logger.Errorf("发送结束消息失败: %v", err)
+            }
+
+            continue
+        }
+
+        c.ctx, c.cancel = context.WithCancel(context.Background())
+        if err := c.bind(dst); nil != err && c.Verbose {
+            logger.Errorf("数据传输失败: %v", err)
+        }
+
+        if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
+            logger.Errorf("发送结束消息失败: %v", err)
+        }
     }
 }
 
@@ -79,66 +133,109 @@ func (c *Connection) Send(code byte) error {
     return c.Protocol.Send(code)
 }
 
-// Connect 连接隧道
-func (c *Connection) Connect(dst net.Conn) error {
-    ch1 := c.bind(c.Tunnel, dst)
+// bind 连接隧道
+func (c *Connection) bind(dst net.Conn) error {
+    ch1 := c.bindFromMessage(c.Tunnel, dst)
     defer close(ch1)
-    ch2 := c.bind(dst, c.Tunnel)
+    ch2 := c.bindToMessage(dst, c.Tunnel)
     defer close(ch2)
 
     over := 0
+    for {
+        select {
+        case err := <-ch1:
+            if nil != err {
+                c.cancel()
 
-    select {
-    case err := <-ch1:
-        if nil != err {
-            return err
-        }
-        over += 1
-    case err := <-ch2:
-        if nil != err {
-            return err
-        }
+                return err
+            }
 
-        over += 1
-    default:
-        if over == 2 {
-            break
+            over += 1
+        case err := <-ch2:
+            if nil != err {
+                c.cancel()
+
+                return err
+            }
+
+            over += 1
+        default:
+            if over == 2 {
+                return nil
+            }
         }
     }
-
-    return nil
 }
 
-// bind 绑定一个reader和writer
-func (c *Connection) bind(reader net.Conn, writer net.Conn) chan error {
+// bindFromMessage 绑定一个reader和writer
+func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan error {
     ch := make(chan error)
 
     go func() {
-        res := utils.CopyLimiterWithCtxToMessageProtocol(c.ctx, reader, writer, c.Limiter)
+        res, message := tunnel.CopyWithCtxFromMessageProtocol(c.ctx, reader, writer)
+        defer close(res)
+        defer close(message)
+
+        for {
+            select {
+            case err := <-res:
+                if nil != err {
+                    ch <- err
+
+                    return
+                }
+            case msg := <-message:
+                if tunnel.CmdOver != msg.Cmd {
+                    ch <- errors.New(fmt.Sprintf("不支持的消息指令: %v", msg.Cmd))
+
+                    return
+                }
+
+                return
+            case <-c.ctx.Done():
+                return
+            }
+        }
+    }()
+
+    return ch
+}
+
+// bindToMessage 绑定一个reader和writer
+func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error {
+    ch := make(chan error)
+
+    go func() {
+        var limiter *rate.Limiter
+        if 0 != c.UserInfo.MaxRate {
+            limiter = rate.NewLimiter(rate.Limit(c.UserInfo.MaxRate*1024), c.UserInfo.MaxRate*512/2)
+        }
+
+        res := tunnel.CopyLimiterWithCtxToMessageProtocol(c.ctx, reader, writer, limiter)
         defer close(res)
 
         timer := time.NewTimer(3 * time.Second)
-        select {
-        case err := <-res:
-            if nil != err {
-                timer.Stop()
+        for {
+            select {
+            case err := <-res:
+                if nil != err {
+                    timer.Stop()
+                    ch <- err
 
-                ch <- err
+                    return
+                }
+
+                timer.Reset(3 * time.Second)
+            case <-timer.C:
+                timer.Stop()
+                ch <- nil
+
+                return
+            case <-c.ctx.Done():
+                timer.Stop()
 
                 return
             }
-
-            timer.Reset(3 * time.Second)
-        case <-timer.C:
-            timer.Stop()
-
-            ch <- nil
-
-            return
-        case <-c.ctx.Done():
-            timer.Stop()
-
-            return
         }
     }()
 

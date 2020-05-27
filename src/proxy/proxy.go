@@ -21,7 +21,7 @@ func (p *Proxy) Init() error {
 
 // Accept 接收连接请求
 func (p *Proxy) Accept(client net.Conn) {
-    connection := &Connection{Tunnel: client}
+    connection := &Connection{Tunnel: client, Verbose: p.Verbose}
     if !connection.check(p.UserConfig) {
         defer client.Close()
 

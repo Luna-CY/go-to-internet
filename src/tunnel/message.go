@@ -16,9 +16,9 @@ func NewDataMessage(conn net.Conn, data []byte) *MessageProtocol {
     return &MessageProtocol{Conn: conn, Cmd: CmdData, Code: MessageCodeNotSet, Data: data}
 }
 
-// NewCloseMessage 建立一个结束消息
-func NewCloseMessage(conn net.Conn) *MessageProtocol {
-    return &MessageProtocol{Conn: conn, Cmd: CmdClose, Code: MessageCodeNotSet}
+// NewOverMessage 建立一个结束消息
+func NewOverMessage(conn net.Conn) *MessageProtocol {
+    return &MessageProtocol{Conn: conn, Cmd: CmdOver, Code: MessageCodeNotSet}
 }
 
 // NewEmptyMessage 建立一个空消息
@@ -106,10 +106,33 @@ func (m *MessageProtocol) Receive() error {
     return nil
 }
 
+// ParseDst 从data中解析目标信息
+func (m *MessageProtocol) ParseDst() error {
+    ipType := m.Data[0]
+
+    m.DstPort = int(m.Data[1])<<8 | int(m.Data[2])
+
+    switch ipType {
+    case 0x01:
+        m.DstIp = string(m.Data[3:])
+    case 0x03:
+        m.DstIp = string(m.Data[3:])
+    case 0x04:
+        m.DstIp = net.IP(m.Data[3:]).String()
+    }
+
+    return nil
+}
+
 // getData 组装发送时的消息内容
 func (m *MessageProtocol) getData() []byte {
     switch m.Cmd {
     case CmdNewConnect:
+        // 响应消息不需要携带数据
+        if MessageCodeSuccess == m.Code {
+            return make([]byte, 0)
+        }
+
         data := make([]byte, 1+2+1+len(m.DstIp))
 
         data[0] = m.IpType
