@@ -104,6 +104,10 @@ func (c *Connection) Accept() {
 
         dst, err := net.Dial("tcp", fmt.Sprintf("%v:%d", message.DstIp, message.DstPort))
         if nil != err {
+            if c.Verbose {
+                logger.Errorf("建立目标连接失败: %v", err)
+            }
+
             if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
                 logger.Errorf("发送结束消息失败: %v", err)
             }
@@ -114,7 +118,7 @@ func (c *Connection) Accept() {
         message.Code = tunnel.MessageCodeSuccess
         if err := message.Send(); nil != err {
             if c.Verbose {
-                logger.Errorf("发送结束消息失败: %v", err)
+                logger.Errorf("发送连接建立响应消息失败: %v", err)
             }
 
             return

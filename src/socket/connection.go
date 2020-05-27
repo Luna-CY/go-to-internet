@@ -38,7 +38,7 @@ func (c *Connection) Init() error {
 // bind 连接隧道
 func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort int) error {
     if c.Verbose {
-        logger.Infof("发起进的数据连接请求. 隧道: %v", c.Id)
+        logger.Infof("发起新的数据连接请求. 隧道: %v", c.Id)
     }
 
     connect := tunnel.NewConnectMessage(c.Tunnel, ipType, dstIp, dstPort)
