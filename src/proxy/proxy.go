@@ -5,7 +5,9 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/http"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
+    "gitee.com/Luna-CY/go-to-internet/src/utils"
     "net"
+    "runtime"
 )
 
 type Proxy struct {
@@ -21,7 +23,8 @@ func (p *Proxy) Init() error {
 
 // Accept 接收连接请求
 func (p *Proxy) Accept(client net.Conn) {
-    connection := &Connection{Tunnel: client, Verbose: p.Verbose}
+    id := utils.RandomString(8)
+    connection := &Connection{Id: id, Tunnel: client, Verbose: p.Verbose}
     if !connection.check(p.UserConfig) {
         defer client.Close()
 
@@ -47,8 +50,11 @@ func (p *Proxy) Accept(client net.Conn) {
 
     connection.UserInfo.CurrentConnection += 1
     if p.Verbose {
-        logger.Infof("建立新的连接(%v): 当前 %v 上限 %v", connection.Username, connection.UserInfo.CurrentConnection, connection.UserInfo.MaxConnection)
+        logger.Infof("建立新的隧道(%v -> %v:%v). ID: %v", connection.Username, connection.UserInfo.CurrentConnection, connection.UserInfo.MaxConnection, id)
     }
 
     connection.Accept()
+    connection.UserInfo.CurrentConnection -= 1
+
+    runtime.GC()
 }

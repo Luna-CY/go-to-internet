@@ -12,9 +12,12 @@ import (
 
 // Connection 隧道连接结构
 type Connection struct {
+    Id        string
     IsRunning bool
     IsClosed  bool
     Tunnel    net.Conn
+
+    Verbose bool
 
     ctx    context.Context
     cancel context.CancelFunc
@@ -34,6 +37,10 @@ func (c *Connection) Init() error {
 
 // bind 连接隧道
 func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort int) error {
+    if c.Verbose {
+        logger.Infof("发起进的数据连接请求. 隧道: %v", c.Id)
+    }
+
     connect := tunnel.NewConnectMessage(c.Tunnel, ipType, dstIp, dstPort)
     if err := connect.Send(); nil != err {
         return errors.New(fmt.Sprintf("发送连接消息失败: %v", err))
@@ -103,9 +110,12 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
                     return
                 }
 
+                ch <- nil
+
                 return
             case <-c.ctx.Done():
                 c.sendOverMessage()
+                ch <- nil
 
                 return
             }
@@ -146,6 +156,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
             case <-c.ctx.Done():
                 timer.Stop()
                 c.sendOverMessage()
+                ch <- nil
 
                 return
             }
@@ -157,7 +168,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
 
 // sendOverMessage 发送结束消息
 func (c *Connection) sendOverMessage() {
-    if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err {
+    if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
         logger.Errorf("发送结束消息失败: %v", err)
     }
 }

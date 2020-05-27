@@ -6,6 +6,7 @@ import (
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
+    "gitee.com/Luna-CY/go-to-internet/src/utils"
     "net"
     "runtime"
     "sync"
@@ -119,5 +120,11 @@ func (c *client) newConnection() (*Connection, error) {
         return nil, errors.New("建立隧道连接失败")
     }
 
-    return &Connection{Tunnel: conn}, nil
+    id := utils.RandomString(8)
+
+    if c.Socket.Verbose {
+        logger.Infof("建立新的隧道. ID: %v", id)
+    }
+
+    return &Connection{Id: id, Tunnel: conn, Verbose: c.Socket.Verbose}, nil
 }

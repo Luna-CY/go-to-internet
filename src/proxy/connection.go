@@ -16,6 +16,7 @@ import (
 
 // Connection 服务器的连接结构
 type Connection struct {
+    Id        string
     IsRunning bool
     Limiter   *rate.Limiter
     Tunnel    net.Conn
@@ -86,7 +87,7 @@ func (c *Connection) Accept() {
         }
 
         if c.Verbose {
-            logger.Error("新的目标连接请求")
+            logger.Infof("新的目标连接请求. 隧道: %v", c.Id)
         }
 
         if err := message.ParseDst(); nil != err {
@@ -122,6 +123,10 @@ func (c *Connection) Accept() {
         c.ctx, c.cancel = context.WithCancel(context.Background())
         if err := c.bind(dst); nil != err && c.Verbose {
             logger.Errorf("数据传输失败: %v", err)
+        }
+
+        if c.Verbose {
+            logger.Info("数据代理完成")
         }
 
         if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
@@ -189,8 +194,12 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
                     return
                 }
 
+                ch <- nil
+
                 return
             case <-c.ctx.Done():
+                ch <- nil
+
                 return
             }
         }
@@ -211,7 +220,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
 
         res := tunnel.CopyLimiterWithCtxToMessageProtocol(c.ctx, reader, writer, limiter)
 
-        timer := time.NewTimer(3 * time.Second)
+        timer := time.NewTimer(1 * time.Second)
         for {
             select {
             case err := <-res:
@@ -222,7 +231,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
                     return
                 }
 
-                timer.Reset(3 * time.Second)
+                timer.Reset(1 * time.Second)
             case <-timer.C:
                 timer.Stop()
                 ch <- nil
@@ -230,6 +239,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
                 return
             case <-c.ctx.Done():
                 timer.Stop()
+                ch <- nil
 
                 return
             }
