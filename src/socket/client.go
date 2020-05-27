@@ -39,8 +39,14 @@ func (c *client) Accept(src net.Conn) {
     }
     defer connection.Close()
 
-    // TODO: 需要从socket获取目标服务器信息
-    if err := connection.Connect(src, "", 0); nil != err {
+    ipType, ip, port, err := c.Socket.getRemoteAddr(src)
+    if nil != err {
+        logger.Errorf("解析目标服务器失败: %v", err)
+
+        return
+    }
+
+    if err := connection.Connect(src, ipType, ip, port); nil != err {
         logger.Errorf("处理请求失败: %v", err)
     }
 }
@@ -97,11 +103,11 @@ func (c *client) newConnection() (*Connection, error) {
         return nil, err
     }
 
-    if tunnel.CodeConnectionUpperLimit == handshake.Code {
+    if tunnel.HandshakeCodeConnectionUpperLimit == handshake.Code {
         return nil, nil
     }
 
-    if tunnel.CodeSuccess != handshake.Code {
+    if tunnel.HandshakeCodeSuccess != handshake.Code {
         return nil, errors.New("建立隧道连接失败")
     }
 

@@ -12,11 +12,5 @@ package tunnel
 //
 // 通信协议
 //
-// VER CMD DATA_L DATA
-//  1   1    1     N
-
-const CodeSuccess = 0x00
-const CodeConnectionUpperLimit = 0x01
-
-const CheckConnectTargetIp = "0.0.0.0"
-const CheckConnectTargetPort = 0
+// VER CMD CODE DATA_L DATA
+//  1   1   1     1     N

@@ -22,7 +22,7 @@ func (p *Proxy) Init() error {
 
 // Accept 接收连接请求
 func (p *Proxy) Accept(client net.Conn) {
-    connection := &connection{Client: client}
+    connection := &Connection{Client: client}
     if !connection.check(p.UserConfig) {
         defer client.Close()
 

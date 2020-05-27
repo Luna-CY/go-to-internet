@@ -1,27 +1,33 @@
 package tunnel
 
-import "net"
-
-const MessageProtocolVersion = 0x01
-
-const CmdNewConnect = 0x01
-const CmdData = 0x02
+import (
+    "encoding/binary"
+    "errors"
+    "net"
+)
 
 // NewConnectMessage 建立一个新的连接消息
-func NewConnectMessage(conn net.Conn, dstIp string, dstPort int) *MessageProtocol {
-    return &MessageProtocol{Conn: conn, Cmd: CmdNewConnect, DstIp: dstIp, DstPort: dstPort}
+func NewConnectMessage(conn net.Conn, ipType byte, dstIp string, dstPort int) *MessageProtocol {
+    return &MessageProtocol{Conn: conn, Cmd: CmdNewConnect, Code: MessageCodeNotSet, IpType: ipType, DstIp: dstIp, DstPort: dstPort, Data: make([]byte, 0)}
 }
 
 // NewDataMessage 建立一个新的数据消息
 func NewDataMessage(conn net.Conn, data []byte) *MessageProtocol {
-    return &MessageProtocol{Conn: conn, Cmd: CmdData, Data: data}
+    return &MessageProtocol{Conn: conn, Cmd: CmdData, Code: MessageCodeNotSet, Data: data}
+}
+
+// NewEmptyMessage 建立一个空消息，用于接收对端发送的消息
+func NewEmptyMessage(conn net.Conn) *MessageProtocol {
+    return &MessageProtocol{Conn: conn}
 }
 
 // MessageProtocol 消息协议
 type MessageProtocol struct {
     Conn net.Conn
     Cmd  byte
+    Code byte
 
+    IpType  byte
     DstIp   string
     DstPort int
 
@@ -30,10 +36,98 @@ type MessageProtocol struct {
 
 // Send 发送消息
 func (m *MessageProtocol) Send() error {
+    sendData := m.getData()
+    dataLength := 1 + 1 + 1 + 1 + len(sendData)
+
+    data := make([]byte, dataLength)
+    data[0] = MessageProtocolVersion
+    data[1] = m.Cmd
+    data[2] = m.Code
+    data[3] = byte(len(sendData))
+
+    index := 4
+    for _, d := range sendData {
+        data[index] = d
+        index++
+    }
+
+    n, err := m.Conn.Write(data)
+    if n != dataLength || nil != err {
+        return errors.New("写入数据失败")
+    }
+
     return nil
 }
 
 // Receive 接收消息
 func (m *MessageProtocol) Receive() error {
+    ver := make([]byte, 1)
+    n, err := m.Conn.Read(ver)
+    if n != 1 || nil != err {
+        return errors.New("读取应答版本号失败")
+    }
+
+    if MessageProtocolVersion != ver[0] {
+        return errors.New("不支持的协议版本")
+    }
+
+    cmd := make([]byte, 1)
+    n, err = m.Conn.Read(cmd)
+    if n != 1 || nil != err {
+        return errors.New("读取指令失败")
+    }
+    m.Cmd = cmd[0]
+
+    code := make([]byte, 1)
+    n, err = m.Conn.Read(code)
+    if n != 1 || nil != err {
+        return errors.New("读取响应码失败")
+    }
+    m.Code = code[0]
+
+    dataLen := make([]byte, 1)
+    n, err = m.Conn.Read(dataLen)
+    if n != 1 || nil != err {
+        return errors.New("读取数据长度失败")
+    }
+
+    data := make([]byte, dataLen[0])
+    n, err = m.Conn.Read(data)
+    if n != int(dataLen[0]) || nil != err {
+        return errors.New("读取数据失败")
+    }
+    m.Data = data
+
     return nil
+}
+
+// getData 组装发送时的消息内容
+func (m *MessageProtocol) getData() []byte {
+    switch m.Cmd {
+    case CmdNewConnect:
+        data := make([]byte, 1+2+1+len(m.DstIp))
+
+        data[0] = m.IpType
+        index := 1
+
+        bs := make([]byte, 2)
+        binary.BigEndian.PutUint16(bs, uint16(m.DstPort))
+
+        for _, d := range bs {
+            data[index] = d
+            index++
+        }
+
+        data[index] = byte(len(m.DstIp))
+        index++
+
+        for _, d := range []byte(m.DstIp) {
+            data[index] = d
+            index++
+        }
+
+        return data
+    default:
+        return m.Data
+    }
 }

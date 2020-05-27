@@ -50,39 +50,6 @@ func (s *Socket) Start() {
     }
 }
 
-// Connection 处理socket连接请求
-func (s *Socket) connection(src net.Conn) {
-    defer src.Close()
-    if !s.isSocks5(src) || !s.authorize(src) {
-        return
-    }
-
-    if !s.isConnectCmd(src) {
-        _, _ = src.Write([]byte{0x05, 0x07, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-
-        return
-    }
-
-    ipType, ip, port, err := s.getRemoteAddr(src)
-    if nil != err {
-        _, _ = src.Write([]byte{0x05, 0x08, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-
-        return
-    }
-
-    client, err := s.startTunnel(ipType, ip, port, s.Verbose)
-    if nil != err {
-        s.sendAck(src, 0x01)
-
-        return
-    }
-    s.sendAck(src, 0x00)
-
-    if err := client.Bind(src); nil != err && s.Verbose {
-        logger.Errorf("绑定隧道失败: %v", err)
-    }
-}
-
 // isSocks5 检查连接是否是socks5协议
 func (s *Socket) isSocks5(conn net.Conn) bool {
     buffer := make([]byte, 1)

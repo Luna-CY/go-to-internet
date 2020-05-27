@@ -6,8 +6,6 @@ import (
     "net"
 )
 
-const HandshakeProtocolVersion = 0x02
-
 // HandshakeProtocol 握手协议
 type HandshakeProtocol struct {
     Conn net.Conn
