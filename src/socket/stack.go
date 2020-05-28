@@ -5,9 +5,7 @@ type Stack []*Connection
 
 // Push 推入
 func (s *Stack) Push(connection *Connection) {
-    if !connection.IsClosed {
-        *s = append(*s, connection)
-    }
+    *s = append(*s, connection)
 }
 
 // Pop 弹出

@@ -42,7 +42,7 @@ type MessageProtocol struct {
 // Send 发送消息
 func (m *MessageProtocol) Send() error {
     sendData := m.getData()
-    dataLength := 1 + 1 + 1 + 1 + 1 + len(sendData)
+    dataLength := 1 + 1 + 1 + 2 + len(sendData)
 
     data := make([]byte, dataLength)
     data[0] = MessageProtocolVersion

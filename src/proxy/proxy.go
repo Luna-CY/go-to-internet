@@ -23,11 +23,11 @@ func (p *Proxy) Init() error {
 
 // Accept 接收连接请求
 func (p *Proxy) Accept(client net.Conn) {
+    defer client.Close()
+
     id := utils.RandomString(8)
     connection := &Connection{Id: id, Tunnel: client, Verbose: p.Verbose}
     if !connection.check(p.UserConfig) {
-        defer client.Close()
-
         ns := http.MockNginx{Conn: client, Server: "nginx", BindHost: p.Hostname}
         ns.SendResponse()
 

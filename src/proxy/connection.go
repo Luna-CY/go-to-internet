@@ -26,9 +26,6 @@ type Connection struct {
     Protocol *tunnel.HandshakeProtocol
 
     Verbose bool
-
-    ctx    context.Context
-    cancel context.CancelFunc
 }
 
 // check 检查连接
@@ -124,17 +121,16 @@ func (c *Connection) Accept() {
             return
         }
 
-        c.ctx, c.cancel = context.WithCancel(context.Background())
-        if err := c.bind(dst); nil != err && c.Verbose {
-            logger.Errorf("数据传输失败: %v", err)
+        if err := c.bind(dst); nil != err {
+            if c.Verbose {
+                logger.Errorf("数据传输失败: %v", err)
+            }
+
+            return
         }
 
         if c.Verbose {
             logger.Info("数据代理完成")
-        }
-
-        if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
-            logger.Errorf("发送结束消息失败: %v", err)
         }
     }
 }
@@ -156,21 +152,25 @@ func (c *Connection) bind(dst net.Conn) error {
         select {
         case err := <-ch1:
             if nil != err {
-                c.cancel()
-
                 return err
             }
 
             over += 1
+            if over == 2 {
+                return nil
+            }
         case err := <-ch2:
             if nil != err {
-                c.cancel()
-
                 return err
             }
 
+            if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err {
+                if c.Verbose {
+                    logger.Errorf("发送结束消息失败: %v", err)
+                }
+            }
+
             over += 1
-        default:
             if over == 2 {
                 return nil
             }
@@ -183,7 +183,7 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
     ch := make(chan error)
 
     go func() {
-        res, message := tunnel.CopyWithCtxFromMessageProtocol(c.ctx, reader, writer)
+        res, message := tunnel.CopyFromMessageProtocol(reader, writer)
 
         for {
             select {
@@ -199,11 +199,6 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
 
                     return
                 }
-
-                ch <- nil
-
-                return
-            case <-c.ctx.Done():
                 ch <- nil
 
                 return
@@ -224,7 +219,8 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
             limiter = rate.NewLimiter(rate.Limit(c.UserInfo.MaxRate*1024), c.UserInfo.MaxRate*512/2)
         }
 
-        res := tunnel.CopyLimiterWithCtxToMessageProtocol(c.ctx, reader, writer, limiter)
+        ctx, cancel := context.WithCancel(context.Background())
+        res := tunnel.CopyLimiterWithCtxToMessageProtocol(ctx, reader, writer, limiter)
 
         timer := time.NewTimer(1 * time.Second)
         for {
@@ -239,11 +235,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
 
                 timer.Reset(1 * time.Second)
             case <-timer.C:
-                timer.Stop()
-                ch <- nil
-
-                return
-            case <-c.ctx.Done():
+                cancel()
                 timer.Stop()
                 ch <- nil
 

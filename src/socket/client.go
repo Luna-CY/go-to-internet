@@ -7,6 +7,7 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "gitee.com/Luna-CY/go-to-internet/src/utils"
+    "io"
     "net"
     "runtime"
     "sync"
@@ -39,9 +40,11 @@ func (c *client) Accept(src net.Conn, ipType byte, ip string, port int) {
         return
     }
 
-    if err := connection.Connect(src, ipType, ip, port); nil != err {
+    if err := connection.Connect(src, ipType, ip, port); nil != err && io.EOF != err {
         connection.Close()
         logger.Errorf("处理请求失败: %v", err)
+
+        return
     }
 
     if c.Socket.Verbose {
@@ -49,7 +52,9 @@ func (c *client) Accept(src net.Conn, ipType byte, ip string, port int) {
     }
 
     connection.Reset()
-    c.stack.Push(connection)
+    if !connection.IsClosed {
+        c.stack.Push(connection)
+    }
 
     runtime.GC()
 }
