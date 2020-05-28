@@ -10,21 +10,20 @@ import (
     "net"
     "runtime"
     "sync"
-    "time"
 )
 
 // client 代理客户端结构定义，内部结构
 type client struct {
     Socket *Socket
 
-    mutex       sync.Mutex
-    maxConnect  bool
-    connections []*Connection
+    mutex      sync.Mutex
+    maxConnect bool
+    stack      *Stack
 }
 
 // Init 初始化代理客户端
 func (c *client) Init() error {
-    c.connections = make([]*Connection, 0)
+    c.stack = &Stack{}
 
     return nil
 }
@@ -39,11 +38,18 @@ func (c *client) Accept(src net.Conn, ipType byte, ip string, port int) {
 
         return
     }
-    defer connection.Reset()
 
     if err := connection.Connect(src, ipType, ip, port); nil != err {
+        connection.Close()
         logger.Errorf("处理请求失败: %v", err)
     }
+
+    if c.Socket.Verbose {
+        logger.Info("代理请求完成")
+    }
+
+    connection.Reset()
+    c.stack.Push(connection)
 
     runtime.GC()
 }
@@ -53,46 +59,27 @@ func (c *client) getConnection() (*Connection, error) {
     c.mutex.Lock()
 
     for {
-        for n, conn := range c.connections {
-            if conn.IsRunning {
-                continue
-            }
-
-            if conn.IsClosed {
-                c.connections = append(c.connections[:n], c.connections[n+1:]...)
-
-                continue
-            }
-
-            if err := conn.Init(); nil != err {
-                conn.Close()
-                c.connections = append(c.connections[:n], c.connections[n+1:]...)
-
-                continue
-            }
-            c.mutex.Unlock()
-
-            return conn, nil
-        }
-
-        if !c.maxConnect {
+        if c.stack.IsEmpty() {
             conn, err := c.newConnection()
             if nil != err {
+                c.mutex.Unlock()
+
                 return nil, err
             }
 
             if nil != conn {
                 if err := conn.Init(); nil == err {
-                    c.connections = append(c.connections, conn)
                     c.mutex.Unlock()
 
                     return conn, nil
                 }
                 conn.Close()
             }
-        }
+        } else {
+            conn := c.stack.Pop()
 
-        time.Sleep(100 * time.Millisecond)
+            return conn, nil
+        }
     }
 }
 
