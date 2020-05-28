@@ -141,7 +141,7 @@ func (m *MessageProtocol) getData() []byte {
             return make([]byte, 0)
         }
 
-        data := make([]byte, 1+2+1+len(m.DstIp))
+        data := make([]byte, 1+2+len(m.DstIp))
 
         data[0] = m.IpType
         index := 1
@@ -153,9 +153,6 @@ func (m *MessageProtocol) getData() []byte {
             data[index] = d
             index++
         }
-
-        data[index] = byte(len(m.DstIp))
-        index++
 
         for _, d := range []byte(m.DstIp) {
             data[index] = d
