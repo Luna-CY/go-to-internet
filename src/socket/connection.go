@@ -19,14 +19,17 @@ type Connection struct {
 
     Verbose bool
 
-    ctx    context.Context
-    cancel context.CancelFunc
+    ctxFromMessage    context.Context
+    cancelFromMessage context.CancelFunc
+    ctxToMessage      context.Context
+    cancelToMessage   context.CancelFunc
 }
 
 // Init 初始化隧道
 func (c *Connection) Init() error {
     c.IsRunning = true
-    c.ctx, c.cancel = context.WithCancel(context.Background())
+    c.ctxFromMessage, c.cancelFromMessage = context.WithCancel(context.Background())
+    c.ctxToMessage, c.cancelToMessage = context.WithCancel(context.Background())
 
     if _, err := c.Tunnel.Write(make([]byte, 0)); nil != err {
         return err
@@ -62,7 +65,6 @@ func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort in
         select {
         case err := <-ch1:
             if nil != err {
-                c.cancel()
                 c.Close()
 
                 return err
@@ -71,7 +73,7 @@ func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort in
             over += 1
         case err := <-ch2:
             if nil != err {
-                c.cancel()
+                c.cancelToMessage()
                 c.Close()
 
                 return err
@@ -91,7 +93,7 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
     ch := make(chan error)
 
     go func() {
-        res, message := tunnel.CopyWithCtxFromMessageProtocol(c.ctx, reader, writer)
+        res, message := tunnel.CopyWithCtxFromMessageProtocol(c.ctxFromMessage, reader, writer)
 
         for {
             select {
@@ -113,7 +115,7 @@ func (c *Connection) bindFromMessage(reader net.Conn, writer net.Conn) chan erro
                 ch <- nil
 
                 return
-            case <-c.ctx.Done():
+            case <-c.ctxFromMessage.Done():
                 c.sendOverMessage()
                 ch <- nil
 
@@ -130,7 +132,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
     ch := make(chan error)
 
     go func() {
-        res := tunnel.CopyLimiterWithCtxToMessageProtocol(c.ctx, reader, writer, nil)
+        res := tunnel.CopyLimiterWithCtxToMessageProtocol(c.ctxToMessage, reader, writer, nil)
 
         timer := time.NewTimer(1 * time.Second)
         for {
@@ -153,7 +155,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
                 ch <- nil
 
                 return
-            case <-c.ctx.Done():
+            case <-c.ctxToMessage.Done():
                 timer.Stop()
                 c.sendOverMessage()
                 ch <- nil
@@ -176,11 +178,12 @@ func (c *Connection) sendOverMessage() {
 // Reset 重置隧道
 func (c *Connection) Reset() {
     c.IsRunning = false
-    c.ctx = nil
 }
 
 // Close 关闭隧道
 func (c *Connection) Close() {
+    c.cancelFromMessage()
+
     c.Tunnel.Close()
     c.IsClosed = true
 }

@@ -56,24 +56,24 @@ func (c *client) Accept(src net.Conn, ipType byte, ip string, port int) {
 
 // getConnection 获取一个可用的隧道连接
 func (c *client) getConnection() (*Connection, error) {
-    c.mutex.Lock()
-
     for {
         if c.stack.IsEmpty() {
             conn, err := c.newConnection()
             if nil != err {
-                c.mutex.Unlock()
 
                 return nil, err
             }
 
             if nil != conn {
                 if err := conn.Init(); nil == err {
-                    c.mutex.Unlock()
 
                     return conn, nil
                 }
                 conn.Close()
+
+                if c.Socket.Verbose {
+                    logger.Errorf("初始化连接失败: %v", err)
+                }
             }
         } else {
             conn := c.stack.Pop()
