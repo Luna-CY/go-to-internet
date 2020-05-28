@@ -146,6 +146,8 @@ func (c *Connection) Send(code byte) error {
 
 // bind 连接隧道
 func (c *Connection) bind(dst net.Conn) error {
+    defer dst.Close()
+
     ch1 := c.bindFromMessage(c.Tunnel, dst)
     ch2 := c.bindToMessage(dst, c.Tunnel)
 
