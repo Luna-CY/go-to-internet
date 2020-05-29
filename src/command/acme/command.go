@@ -171,7 +171,7 @@ func checkAndInstallNginx() error {
             if err := execCommand("apt", []string{"install", "nginx", "-y"}, nil, true); nil != err {
                 return errors.New(fmt.Sprintf("安装nginx失败: %v", err))
             }
-        case "centos":
+        case "redhat":
             if err := execCommand("yum", []string{"install", "nginx", "-y"}, nil, true); nil != err {
                 return errors.New(fmt.Sprintf("安装nginx失败: %v", err))
             }
@@ -211,7 +211,7 @@ func generateNginxConfig(hostname string) error {
             return err
         }
         configPath = fmt.Sprintf("/etc/nginx/sites-enabled/%v.conf", hostname)
-    case "centos":
+    case "redhat":
         if err := os.MkdirAll("/etc/nginx/conf.d", 0755); nil != err {
             return err
         }
@@ -248,9 +248,9 @@ func getOsType() (string, error) {
         }
 
         // centos/fedora视为redhat
-        if centos, err := utils.FileExists("/etc/redhat-version"); nil != err || centos {
-            if centos {
-                return "centos", nil
+        if redhat, err := utils.FileExists("/etc/redhat-version"); nil != err || redhat {
+            if redhat {
+                return "redhat", nil
             }
 
             return "", err
