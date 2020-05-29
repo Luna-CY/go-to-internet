@@ -33,27 +33,40 @@ func (c *client) Init() error {
 func (c *client) Accept(src net.Conn, ipType byte, ip string, port int) {
     defer src.Close()
 
-    connection, err := c.getConnection()
-    if nil != err {
-        logger.Errorf("处理请求失败: %v", err)
+    for {
+        connection, err := c.getConnection()
+        if nil != err {
+            logger.Errorf("获取隧道失败: %v", err)
 
-        return
-    }
+            return
+        }
 
-    if err := connection.Connect(src, ipType, ip, port); nil != err && io.EOF != err {
-        connection.Close()
-        logger.Errorf("处理请求失败: %v", err)
+        if err := connection.Connect(src, ipType, ip, port); nil != err {
+            if ClosedError == err {
+                // 如果服务端连接已被关闭，那么重新选择隧道处理此次请求
+                continue
+            }
 
-        return
-    }
+            if io.EOF != err {
+                connection.Close()
+                logger.Errorf("处理请求失败: %v", err)
 
-    if c.Socket.Verbose {
-        logger.Info("代理请求完成")
-    }
+                // 非隧道关闭异常则处理失败
+                return
+            }
+        }
 
-    connection.Reset()
-    if !connection.IsClosed {
-        c.stack.Push(connection)
+        if c.Socket.Verbose {
+            logger.Info("代理请求完成")
+        }
+
+        connection.Reset()
+        if !connection.IsClosed {
+            c.stack.Push(connection)
+        }
+
+        // 该循环在正常情况只执行一次
+        break
     }
 
     runtime.GC()

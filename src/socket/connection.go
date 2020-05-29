@@ -38,7 +38,7 @@ func (c *Connection) Connect(src net.Conn, ipType byte, dstIp string, dstPort in
 
     connect := tunnel.NewConnectMessage(c.Tunnel, ipType, dstIp, dstPort)
     if err := connect.Send(); nil != err {
-        return errors.New(fmt.Sprintf("发送连接消息失败: %v", err))
+        return ClosedError
     }
 
     if err := connect.Receive(); nil != err {
