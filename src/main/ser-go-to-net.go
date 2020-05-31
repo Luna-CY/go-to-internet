@@ -143,7 +143,14 @@ func tlsListen(config *proxy.Config) {
         return
     }
     defer ln.Close()
-    logger.Infof("启动监听 %v:%d ...\n", config.Hostname, config.Port)
+    logger.Infof("启动监听 %v:%d ...", config.Hostname, config.Port)
+
+    proxyInstance := proxy.Proxy{UserConfig: userConfig, Hostname: config.Hostname, Verbose: config.Verbose}
+    if err := proxyInstance.Init(); nil != err {
+        logger.Errorf("初始化服务器失败: %v", err)
+
+        return
+    }
 
     for {
         conn, err := ln.Accept()
@@ -151,7 +158,7 @@ func tlsListen(config *proxy.Config) {
             continue
         }
 
-        go proxy.StartConnection(conn, config, userConfig)
+        go proxyInstance.Accept(conn)
     }
 }
 

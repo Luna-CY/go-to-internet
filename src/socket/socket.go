@@ -19,16 +19,12 @@ type Socket struct {
     Password string // 身份认证密码
 
     Verbose bool // 详细模式
+
+    client *client
 }
 
 // Start 启动本地服务监听
 func (s *Socket) Start() {
-    if err := s.checkTunnel(); nil != err {
-        logger.Error("无法连接服务器，请检查配置")
-
-        return
-    }
-
     logger.Infof("启动监听 %v:%d ...\n", s.LocalAddr, s.LocalPort)
 
     listen, err := net.Listen("tcp", fmt.Sprintf("%v:%d", s.LocalAddr, s.LocalPort))
@@ -38,6 +34,13 @@ func (s *Socket) Start() {
         return
     }
     defer listen.Close()
+
+    s.client = &client{Socket: s}
+    if err := s.client.Init(); nil != err {
+        logger.Errorf("初始化代理客户端失败: %v", err)
+
+        return
+    }
 
     for {
         conn, err := listen.Accept()
@@ -49,8 +52,9 @@ func (s *Socket) Start() {
     }
 }
 
-// connection 处理socket连接请求
+// Connection 处理socket连接请求
 func (s *Socket) connection(src net.Conn) {
+    defer src.Close()
     if !s.isSocks5(src) || !s.authorize(src) {
         return
     }
@@ -67,19 +71,9 @@ func (s *Socket) connection(src net.Conn) {
 
         return
     }
-
-    client, err := s.startTunnel(ipType, ip, port, s.Verbose)
-    if nil != err {
-        defer src.Close()
-        s.sendAck(src, 0x01)
-
-        return
-    }
     s.sendAck(src, 0x00)
 
-    if err := client.Bind(src); nil != err && s.Verbose {
-        logger.Errorf("绑定隧道失败: %v", err)
-    }
+    s.client.Accept(src, ipType, ip, port)
 }
 
 // isSocks5 检查连接是否是socks5协议
