@@ -228,7 +228,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
         ctx, cancel := context.WithCancel(context.Background())
         res := tunnel.CopyLimiterWithCtxToMessageProtocol(ctx, reader, writer, limiter)
 
-        timer := time.NewTimer(1 * time.Second)
+        timer := time.NewTimer(30 * time.Second)
         for {
             select {
             case err := <-res:
@@ -239,7 +239,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
                     return
                 }
 
-                timer.Reset(1 * time.Second)
+                timer.Reset(30 * time.Second)
             case <-timer.C:
                 cancel()
                 timer.Stop()
