@@ -65,13 +65,7 @@ func (c *Connection) check(userConfig *config.UserConfig) bool {
 
 // Accept 接收连接请求并处理
 func (c *Connection) Accept() {
-    // 隧道保持一个小时
-    ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3600*time.Second))
     for {
-        if nil != ctx.Err() {
-            return
-        }
-
         message := tunnel.NewEmptyMessage(c.Tunnel)
         if err := message.Receive(); nil != err {
             if c.Verbose {
