@@ -10,6 +10,7 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "golang.org/x/crypto/bcrypt"
     "golang.org/x/time/rate"
+    "math/rand"
     "net"
     "time"
 )
@@ -65,7 +66,12 @@ func (c *Connection) check(userConfig *config.UserConfig) bool {
 
 // Accept 接收连接请求并处理
 func (c *Connection) Accept() {
+    ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(rand.Intn(3000)+600)*time.Second))
     for {
+        if nil != ctx.Err() {
+            return
+        }
+
         message := tunnel.NewEmptyMessage(c.Tunnel)
         if err := message.Receive(); nil != err {
             if c.Verbose {

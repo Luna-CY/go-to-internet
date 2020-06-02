@@ -26,19 +26,6 @@ type client struct {
 func (c *client) Init() error {
     c.stack = &Stack{}
 
-    for i := 0; i < 8; i++ {
-        conn, err := c.newConnection()
-        if nil != err {
-            return err
-        }
-
-        if nil == conn {
-            break
-        }
-
-        c.stack.Push(conn)
-    }
-
     return nil
 }
 
