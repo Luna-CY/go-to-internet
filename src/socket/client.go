@@ -8,9 +8,11 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "gitee.com/Luna-CY/go-to-internet/src/utils"
     "io"
+    "math/rand"
     "net"
     "runtime"
     "sync"
+    "time"
 )
 
 // client 代理客户端结构定义，内部结构
@@ -103,7 +105,8 @@ func (c *client) getConnection() (*Connection, error) {
 
 // newConnection 新建一个隧道连接
 func (c *client) newConnection() (*Connection, error) {
-    conn, err := tls.Dial("tcp", fmt.Sprintf("%v:%d", c.Socket.Hostname, c.Socket.Port), nil)
+    dialer := &net.Dialer{Timeout: time.Duration(rand.Intn(3000)+600) * time.Second}
+    conn, err := tls.DialWithDialer(dialer, "tcp", fmt.Sprintf("%v:%d", c.Socket.Hostname, c.Socket.Port), nil)
     if nil != err {
         return nil, err
     }
