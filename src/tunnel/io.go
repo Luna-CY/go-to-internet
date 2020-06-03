@@ -5,7 +5,6 @@ import (
     "golang.org/x/time/rate"
     "io"
     "net"
-    "time"
 )
 
 // CopyLimiterWithCtxToMessageProtocol 基于context的Copy
@@ -16,7 +15,7 @@ func CopyLimiterWithCtxToMessageProtocol(ctx context.Context, reader net.Conn, w
         var length int
 
         if nil != limiter {
-            length = limiter.Burst()
+            length = 1024
         } else {
             length = 1024
         }
@@ -25,10 +24,10 @@ func CopyLimiterWithCtxToMessageProtocol(ctx context.Context, reader net.Conn, w
 
         for {
             if nil != limiter {
-                if !limiter.AllowN(time.Now(), limiter.Burst()) {
-                    ch <- nil
+                if err := limiter.Wait(ctx); nil != err {
+                    ch <- err
 
-                    continue
+                    return
                 }
             }
 

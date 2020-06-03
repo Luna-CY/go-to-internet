@@ -215,8 +215,8 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
 
     go func() {
         var limiter *rate.Limiter
-        if 0 != c.UserInfo.MaxRate {
-            limiter = rate.NewLimiter(rate.Limit(c.UserInfo.MaxRate*1024), c.UserInfo.MaxRate*512/2)
+        if 0 < c.UserInfo.MaxRate {
+            limiter = rate.NewLimiter(rate.Limit(c.UserInfo.MaxRate), c.UserInfo.MaxRate)
         }
 
         ctx, cancel := context.WithCancel(context.Background())
