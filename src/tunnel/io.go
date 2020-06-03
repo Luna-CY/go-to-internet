@@ -12,15 +12,7 @@ func CopyLimiterWithCtxToMessageProtocol(ctx context.Context, reader net.Conn, w
     ch := make(chan error)
 
     go func() {
-        var length int
-
-        if nil != limiter {
-            length = 1024
-        } else {
-            length = 1024
-        }
-
-        buf := make([]byte, length)
+        buf := make([]byte, 1024)
 
         for {
             if nil != limiter {
