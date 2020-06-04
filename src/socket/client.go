@@ -8,7 +8,6 @@ import (
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
     "gitee.com/Luna-CY/go-to-internet/src/utils"
     "io"
-    "math/rand"
     "net"
     "runtime"
     "sync"
@@ -63,6 +62,10 @@ func (c *client) Accept(src net.Conn, ipType byte, ip string, port int) {
         }
 
         connection.Reset()
+        if connection.IsTimeout && !connection.IsClosed {
+            connection.Close()
+        }
+
         if !connection.IsClosed {
             c.stack.Push(connection)
         }
@@ -97,6 +100,9 @@ func (c *client) getConnection() (*Connection, error) {
             }
         } else {
             conn := c.stack.Pop()
+            if conn.IsClosed {
+                continue
+            }
 
             return conn, nil
         }
@@ -105,7 +111,7 @@ func (c *client) getConnection() (*Connection, error) {
 
 // newConnection 新建一个隧道连接
 func (c *client) newConnection() (*Connection, error) {
-    dialer := &net.Dialer{Timeout: time.Duration(rand.Intn(3000)+600) * time.Second}
+    dialer := &net.Dialer{Timeout: 3 * time.Second}
     conn, err := tls.DialWithDialer(dialer, "tcp", fmt.Sprintf("%v:%d", c.Socket.Hostname, c.Socket.Port), nil)
     if nil != err {
         return nil, err

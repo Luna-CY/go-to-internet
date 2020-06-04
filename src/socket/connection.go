@@ -6,6 +6,7 @@ import (
     "fmt"
     "gitee.com/Luna-CY/go-to-internet/src/logger"
     "gitee.com/Luna-CY/go-to-internet/src/tunnel"
+    "math/rand"
     "net"
     "time"
 )
@@ -15,6 +16,7 @@ type Connection struct {
     Id        string
     IsRunning bool
     IsClosed  bool
+    IsTimeout bool
     Tunnel    net.Conn
 
     Verbose bool
@@ -26,6 +28,9 @@ func (c *Connection) Init() error {
     if _, err := c.Tunnel.Write(make([]byte, 0)); nil != err {
         return err
     }
+
+    timeout := time.Duration(rand.Intn(3000)+600) * time.Second
+    time.AfterFunc(timeout, c.timeout)
 
     return nil
 }
@@ -150,6 +155,15 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
 func (c *Connection) sendOverMessage() {
     if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
         logger.Errorf("发送结束消息失败: %v", err)
+    }
+}
+
+// timeout 连接已经达到超时时间
+func (c *Connection) timeout() {
+    c.IsTimeout = true
+
+    if !c.IsRunning {
+        c.Close()
     }
 }
 
