@@ -65,13 +65,7 @@ func (c *Connection) check(userConfig *config.UserConfig) bool {
 
 // Accept 接收连接请求并处理
 func (c *Connection) Accept() {
-    // 隧道保持一个小时
-    ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(3600*time.Second))
     for {
-        if nil != ctx.Err() {
-            return
-        }
-
         message := tunnel.NewEmptyMessage(c.Tunnel)
         if err := message.Receive(); nil != err {
             if c.Verbose {
@@ -221,14 +215,14 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
 
     go func() {
         var limiter *rate.Limiter
-        if 0 != c.UserInfo.MaxRate {
-            limiter = rate.NewLimiter(rate.Limit(c.UserInfo.MaxRate*1024), c.UserInfo.MaxRate*512/2)
+        if 0 < c.UserInfo.MaxRate {
+            limiter = rate.NewLimiter(rate.Limit(c.UserInfo.MaxRate), c.UserInfo.MaxRate)
         }
 
         ctx, cancel := context.WithCancel(context.Background())
         res := tunnel.CopyLimiterWithCtxToMessageProtocol(ctx, reader, writer, limiter)
 
-        timer := time.NewTimer(1 * time.Second)
+        timer := time.NewTimer(30 * time.Second)
         for {
             select {
             case err := <-res:
@@ -239,7 +233,7 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
                     return
                 }
 
-                timer.Reset(1 * time.Second)
+                timer.Reset(30 * time.Second)
             case <-timer.C:
                 cancel()
                 timer.Stop()

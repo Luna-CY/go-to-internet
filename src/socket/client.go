@@ -11,6 +11,7 @@ import (
     "net"
     "runtime"
     "sync"
+    "time"
 )
 
 // client 代理客户端结构定义，内部结构
@@ -61,6 +62,10 @@ func (c *client) Accept(src net.Conn, ipType byte, ip string, port int) {
         }
 
         connection.Reset()
+        if connection.IsTimeout && !connection.IsClosed {
+            connection.Close()
+        }
+
         if !connection.IsClosed {
             c.stack.Push(connection)
         }
@@ -95,6 +100,9 @@ func (c *client) getConnection() (*Connection, error) {
             }
         } else {
             conn := c.stack.Pop()
+            if conn.IsClosed {
+                continue
+            }
 
             return conn, nil
         }
@@ -103,7 +111,8 @@ func (c *client) getConnection() (*Connection, error) {
 
 // newConnection 新建一个隧道连接
 func (c *client) newConnection() (*Connection, error) {
-    conn, err := tls.Dial("tcp", fmt.Sprintf("%v:%d", c.Socket.Hostname, c.Socket.Port), nil)
+    dialer := &net.Dialer{Timeout: 3 * time.Second}
+    conn, err := tls.DialWithDialer(dialer, "tcp", fmt.Sprintf("%v:%d", c.Socket.Hostname, c.Socket.Port), nil)
     if nil != err {
         return nil, err
     }

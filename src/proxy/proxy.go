@@ -34,7 +34,7 @@ func (p *Proxy) Accept(client net.Conn) {
         return
     }
 
-    if 0 != connection.UserInfo.MaxConnection && connection.UserInfo.CurrentConnection >= connection.UserInfo.MaxConnection {
+    if 0 < connection.UserInfo.MaxConnection && connection.UserInfo.CurrentConnection >= connection.UserInfo.MaxConnection {
         if err := connection.Send(tunnel.HandshakeCodeConnectionUpperLimit); nil != err {
             logger.Errorf("发送握手响应失败: %v", err)
         }
