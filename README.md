@@ -28,7 +28,7 @@
 
 #### 使用教程
 
-使用教程见[这里](https://blog.luna.xin/article/29.html)
+使用教程见[这里](https://blog.luna.xin/article/29.html)，或者查看[wiki](https://github.com/Luna-CY/go-to-internet/wiki)
 
 #### 使用说明: 服务端
 
