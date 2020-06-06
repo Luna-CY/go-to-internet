@@ -60,8 +60,8 @@
 
 #### 客户端GUI项目
 
-- macos: [GoToNetUI-X](https://gitee.com/Luna-CY/GoToNetUI-X)
-- android: [GoToNetUI-A (开发中)](https://gitee.com/Luna-CY/GoToNetUI-A)
+- macos: [GoToNetUI-X](https://github.com/Luna-CY/GoToNetUI-X)
+- android: [GoToNetUI-A (开发中)](https://github.com/Luna-CY/GoToNetUI-A)
 - windows: GoToNetUI-W (计划中)
 
 #### 本地开发指南
