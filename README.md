@@ -1,5 +1,11 @@
 # go-to-internet
 
+## 项目迁移说明
+
+由于gitee的发行版文件下载的问题太大了，下载附件要求必须登录，而且下载速度连100KB都到不了
+
+鉴于此已将该仓库转移至[github](https://github.com/Luna-CY/go-to-internet)，之后此仓库是否还会同步进度看gitee的情况待定
+
 #### 介绍
 基于TLS协议的透明代理服务器
 
