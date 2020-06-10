@@ -220,6 +220,7 @@ func generateNginxConfig(hostname string) error {
         return errors.New("不支持的系统类型")
     }
 
+    logger.Infof("生成nginx配置文件: %v", configPath)
     file, err := os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
     if nil != err {
         return err
