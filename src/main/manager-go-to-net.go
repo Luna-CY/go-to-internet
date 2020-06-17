@@ -54,6 +54,8 @@ func main() {
         os.Exit(0)
     }
 
+    var cmd command.SubCommand
+
     switch os.Args[1] {
     case "user":
         if err := parse(userCmd, userConfig); nil != err {
@@ -62,9 +64,7 @@ func main() {
             return
         }
 
-        if err := user.Exec(userConfig); nil != err {
-            logger.Errorf("处理操作失败: %v", err)
-        }
+        cmd = &user.Cmd{Config: userConfig}
     case "acme":
         if err := parse(acmeCmd, acmeConfig); nil != err {
             acmeCmd.Usage()
@@ -72,13 +72,15 @@ func main() {
             return
         }
 
-        if err := acme.Exec(acmeConfig); nil != err {
-            logger.Errorf("处理操作失败: %v", err)
-        }
+        cmd = &acme.Cmd{Config: acmeConfig}
     default:
         logger.Error("不支持的子命令，请查看帮助信息")
 
         return
+    }
+
+    if err := cmd.Exec(); nil != err {
+        logger.Errorf("处理操作失败: %v", err)
     }
 }
 

@@ -9,3 +9,10 @@ type Config interface {
     // Validate 方法校验用户输入的配置是否满足子命令的运行
     Validate() bool
 }
+
+// SubCommand 子命令接口
+type SubCommand interface {
+
+    // 执行命令
+    Exec() error
+}
