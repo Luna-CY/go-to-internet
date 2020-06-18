@@ -2,6 +2,7 @@ package utils
 
 import (
     "bufio"
+    "gitee.com/Luna-CY/go-to-internet/src/logger"
     "io"
     "os"
     "os/exec"
@@ -72,4 +73,56 @@ func ExecCommandGetStdout(name string, args []string, env *[]string) ([]string, 
     }
 
     return result, nil
+}
+
+// ExecCommandOutputToLog 执行命令并将输入打印到日志
+func ExecCommandOutputToLog(name string, args []string, env *[]string) error {
+    cmd := exec.Command(name, args...)
+    cmd.Env = os.Environ()
+
+    if nil != env {
+        for _, value := range *env {
+            cmd.Env = append(cmd.Env, value)
+        }
+    }
+
+    stdout, err := cmd.StdoutPipe()
+    if nil != err {
+        return err
+    }
+    defer stdout.Close()
+
+    stderr, err := cmd.StderrPipe()
+    if nil != err {
+        return err
+    }
+    defer stderr.Close()
+
+    if err := cmd.Start(); nil != err {
+        return err
+    }
+
+    outReader := bufio.NewReader(stdout)
+    for {
+        line, err := outReader.ReadString('\n')
+        if err != nil || io.EOF == err {
+            break
+        }
+        logger.Info(strings.Trim(line, "\n"))
+    }
+
+    errReader := bufio.NewReader(stderr)
+    for {
+        line, err := errReader.ReadString('\n')
+        if err != nil || io.EOF == err {
+            break
+        }
+        logger.Error(strings.Trim(line, "\n"))
+    }
+
+    if err := cmd.Wait(); nil != err {
+        return err
+    }
+
+    return nil
 }

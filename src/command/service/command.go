@@ -17,14 +17,16 @@ func (c *Cmd) Exec() error {
     case c.Config.Install:
         return c.generateServiceConfig()
     case c.Config.Start:
+        return utils.ExecCommandOutputToLog("systemctl", []string{"start", "go-to-net"}, nil)
     case c.Config.Stop:
+        return utils.ExecCommandOutputToLog("systemctl", []string{"stop", "go-to-net"}, nil)
     case c.Config.Enable:
+        return utils.ExecCommandOutputToLog("systemctl", []string{"enable", "go-to-net"}, nil)
     case c.Config.Disable:
+        return utils.ExecCommandOutputToLog("systemctl", []string{"disable", "go-to-net"}, nil)
     default:
         return errors.New("无效命令")
     }
-
-    return nil
 }
 
 // generateServiceConfig 生成服务配置文件
@@ -33,13 +35,13 @@ func (c *Cmd) generateServiceConfig() error {
         return errors.New("域名不能为空")
     }
 
-    result, err := utils.ExecCommandGetStdout("which", []string{"ser-go-to-net"}, nil)
-    if nil != err {
-        return err
-    }
-
-    if 0 == len(result) {
-        return errors.New("未找到ser-go-to-net命令")
+    exec := c.Config.ExecCmd
+    if "" == exec {
+        result, err := utils.ExecCommandGetStdout("which", []string{"ser-go-to-net"}, nil)
+        if nil != err || 0 == len(result) {
+            return errors.New("未找到ser-go-to-net命令，可以使用 -exec 参数指定ser-go-to-net命令位置")
+        }
+        exec = result[0]
     }
 
     filepath := "/etc/systemd/system/go-to-net.service"
@@ -48,7 +50,7 @@ func (c *Cmd) generateServiceConfig() error {
         return err
     }
 
-    content := strings.Replace(template, "EXEC_CMD", result[0], 1)
+    content := strings.Replace(template, "EXEC_CMD", exec, 1)
     content = strings.Replace(content, "YOUR_HOST", c.Config.Hostname, 1)
 
     n, err := file.Write([]byte(content))
@@ -64,5 +66,5 @@ func (c *Cmd) generateServiceConfig() error {
         return errors.New("生成服务配置文件失败")
     }
 
-    return nil
+    return utils.ExecCommandOutputToLog("systemctl", []string{"daemon-reload"}, nil)
 }

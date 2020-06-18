@@ -17,10 +17,11 @@ type Config struct {
     Disable bool // 取消开机自启动
 
     Hostname string // 域名
+    ExecCmd  string // ser-go-to-net可执行文件位置
 }
 
 func (c *Config) Usage() {
-    _, _ = fmt.Fprintln(c.Cmd.Output(), "manager-go-to-net service [-install|-start|-stop|-enable|-disable]")
+    _, _ = fmt.Fprintln(c.Cmd.Output(), "manager-go-to-net service [-install|-start|-stop|-enable|-disable] [options]")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "usage:")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net service -install -hostname YOUR_HOST")
