@@ -21,9 +21,10 @@ type Config struct {
 
 func (c *Config) Usage() {
     _, _ = fmt.Fprintln(c.Cmd.Output(), "manager-go-to-net service [-install|-start|-stop|-enable|-disable] [options]")
+    _, _ = fmt.Fprintln(c.Cmd.Output(), "该命令支持通过默认参数安装代理服务到系统")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "usage:")
-    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net service -install -hostname YOUR_HOST")
+    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net service -install -hostname YOUR_HOST -exec EXEC_PATH")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net service -start")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net service -stop")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "")
@@ -37,7 +38,7 @@ func (c *Config) Validate() bool {
         return false
     }
 
-    if c.Install && "" == c.Hostname {
+    if c.Install && ("" == c.Hostname || "" == c.ExecCmd) {
         return false
     }
 

@@ -124,7 +124,7 @@ func serviceSubCommand() {
     serviceCmd.BoolVar(&config.Disable, "disable", false, "取消开机启动")
 
     serviceCmd.StringVar(&config.Hostname, "hostname", "", "域名，指定-install项时必须指定此项")
-    serviceCmd.StringVar(&config.ExecCmd, "exec", "", "ser-go-to-net命令位置")
+    serviceCmd.StringVar(&config.ExecCmd, "exec", "", "ser-go-to-net命令位置，指定-install项时必须指定此项")
 
     if err := parse(serviceCmd, config); nil != err {
         serviceCmd.Usage()

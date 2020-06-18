@@ -117,7 +117,7 @@ func ExecCommandOutputToLog(name string, args []string, env *[]string) error {
         if err != nil || io.EOF == err {
             break
         }
-        logger.Error(strings.Trim(line, "\n"))
+        logger.Info(strings.Trim(line, "\n"))
     }
 
     if err := cmd.Wait(); nil != err {

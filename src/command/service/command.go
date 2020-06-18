@@ -35,22 +35,13 @@ func (c *Cmd) generateServiceConfig() error {
         return errors.New("域名不能为空")
     }
 
-    exec := c.Config.ExecCmd
-    if "" == exec {
-        result, err := utils.ExecCommandGetStdout("which", []string{"ser-go-to-net"}, nil)
-        if nil != err || 0 == len(result) {
-            return errors.New("未找到ser-go-to-net命令，可以使用 -exec 参数指定ser-go-to-net命令位置")
-        }
-        exec = result[0]
-    }
-
     filepath := "/etc/systemd/system/go-to-net.service"
     file, err := os.OpenFile(filepath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
     if nil != err {
         return err
     }
 
-    content := strings.Replace(template, "EXEC_CMD", exec, 1)
+    content := strings.Replace(template, "EXEC_CMD", c.Config.ExecCmd, 1)
     content = strings.Replace(content, "YOUR_HOST", c.Config.Hostname, 1)
 
     n, err := file.Write([]byte(content))

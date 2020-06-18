@@ -65,7 +65,7 @@ func (c *Cmd) Exec() error {
             break
         }
 
-        if err := c.execCommand("sh", []string{"-c", output}, &[]string{"INSTALLONLINE=1"}, true); nil != err {
+        if err := utils.ExecCommandOutputToLog("sh", []string{"-c", output}, &[]string{"INSTALLONLINE=1"}); nil != err {
             logger.Errorf("安装acme.sh失败: %v", err)
 
             break
@@ -127,7 +127,7 @@ func (c *Cmd) Exec() error {
                 break
             }
 
-            if err := c.execCommand(command, []string{"--issue", "-d", c.Config.Hostname, "--nginx"}, nil, true); nil != err {
+            if err := utils.ExecCommandOutputToLog(command, []string{"--issue", "-d", c.Config.Hostname, "--nginx"}, nil); nil != err {
                 logger.Errorf("申请证书失败: %v", err)
 
                 break
@@ -135,7 +135,7 @@ func (c *Cmd) Exec() error {
 
             logger.Info("申请证书完成")
         default:
-            if err := c.execCommand(command, []string{"--issue", "-d", c.Config.Hostname, "--standalone"}, nil, true); nil != err {
+            if err := utils.ExecCommandOutputToLog(command, []string{"--issue", "-d", c.Config.Hostname, "--standalone"}, nil); nil != err {
                 logger.Errorf("申请证书失败: %v", err)
 
                 break
@@ -171,11 +171,11 @@ func (c *Cmd) checkAndInstallNginx() error {
 
         switch system {
         case "debian":
-            if err := c.execCommand("apt", []string{"install", "nginx", "-y"}, nil, true); nil != err {
+            if err := utils.ExecCommandOutputToLog("apt", []string{"install", "nginx", "-y"}, nil); nil != err {
                 return errors.New(fmt.Sprintf("安装nginx失败: %v", err))
             }
         case "redhat":
-            if err := c.execCommand("yum", []string{"install", "nginx", "-y"}, nil, true); nil != err {
+            if err := utils.ExecCommandOutputToLog("yum", []string{"install", "nginx", "-y"}, nil); nil != err {
                 return errors.New(fmt.Sprintf("安装nginx失败: %v", err))
             }
         default:
@@ -266,64 +266,6 @@ func (c *Cmd) getOsType() (string, error) {
     default:
         return "unknown", nil
     }
-}
-
-// execCommand 执行命令
-func (c *Cmd) execCommand(name string, args []string, env *[]string, output bool) error {
-    cmd := exec.Command(name, args...)
-    cmd.Env = os.Environ()
-
-    if nil != env {
-        for _, value := range *env {
-            cmd.Env = append(cmd.Env, value)
-        }
-    }
-
-    if output {
-        stdout, err := cmd.StdoutPipe()
-        if nil != err {
-            return err
-        }
-        defer stdout.Close()
-
-        stderr, err := cmd.StderrPipe()
-        if nil != err {
-            return err
-        }
-        defer stderr.Close()
-
-        if err := cmd.Start(); nil != err {
-            return err
-        }
-
-        outReader := bufio.NewReader(stdout)
-        for {
-            line, err := outReader.ReadString('\n')
-            if err != nil || io.EOF == err {
-                break
-            }
-            logger.Info(strings.Trim(line, "\n"))
-        }
-
-        errReader := bufio.NewReader(stderr)
-        for {
-            line, err := errReader.ReadString('\n')
-            if err != nil || io.EOF == err {
-                break
-            }
-            logger.Error(strings.Trim(line, "\n"))
-        }
-
-        if err := cmd.Wait(); nil != err {
-            return err
-        }
-    } else {
-        if err := cmd.Run(); nil != err {
-            return err
-        }
-    }
-
-    return nil
 }
 
 // download 下载文件
