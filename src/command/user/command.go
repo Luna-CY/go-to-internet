@@ -12,37 +12,36 @@ import (
     "path"
 )
 
-// Exec 处理命令
-func Exec(config *Config) error {
-    cmd := &userCmd{cmdInputConfig: config}
-    if err := cmd.validateConfigFilePath(); nil != err {
+// UserCmd 用户子命令结构
+type Cmd struct {
+    Config *Config
+
+    userConfig *config.UserConfig
+}
+
+func (c *Cmd) Exec() error {
+    if err := c.validateConfigFilePath(); nil != err {
         return err
     }
 
-    userConfig, err := cmd.load()
+    userConfig, err := c.load()
     if nil != err {
         return err
     }
 
-    cmd.fileConfig = userConfig
+    c.userConfig = userConfig
 
-    return cmd.exec()
-}
-
-// userCmd 用户子命令结构
-type userCmd struct {
-    cmdInputConfig *Config
-    fileConfig     *config.UserConfig
+    return c.exec()
 }
 
 // validateConfigFilePath 检查配置文件
-func (u *userCmd) validateConfigFilePath() error {
-    if "" == u.cmdInputConfig.Config {
+func (c *Cmd) validateConfigFilePath() error {
+    if "" == c.Config.Config {
         return errors.New("配置文件路径不能为空")
     }
 
-    u.cmdInputConfig.Config = path.Clean(u.cmdInputConfig.Config)
-    info, err := os.Stat(u.cmdInputConfig.Config)
+    c.Config.Config = path.Clean(c.Config.Config)
+    info, err := os.Stat(c.Config.Config)
     if nil == err {
         if info.IsDir() {
             return errors.New("用户配置文件路径必须是一个文件")
@@ -55,16 +54,16 @@ func (u *userCmd) validateConfigFilePath() error {
         return errors.New(fmt.Sprintf("无法查询文件信息: %v", err))
     }
 
-    return u.init()
+    return c.init()
 }
 
 // init 初始化配置文件
-func (u *userCmd) init() error {
-    if err := os.MkdirAll(path.Dir(u.cmdInputConfig.Config), os.FileMode(0644)); nil != err {
+func (c *Cmd) init() error {
+    if err := os.MkdirAll(path.Dir(c.Config.Config), os.FileMode(0644)); nil != err {
         return errors.New(fmt.Sprintf("创建配置目录失败: %v", err))
     }
 
-    file, err := os.OpenFile(u.cmdInputConfig.Config, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+    file, err := os.OpenFile(c.Config.Config, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
     if nil != err {
         return errors.New(fmt.Sprintf("创建配置文件失败: %v", err))
     }
@@ -79,8 +78,8 @@ func (u *userCmd) init() error {
 }
 
 // load 加载配置文件
-func (u *userCmd) load() (*config.UserConfig, error) {
-    file, err := os.Open(u.cmdInputConfig.Config)
+func (c *Cmd) load() (*config.UserConfig, error) {
+    file, err := os.Open(c.Config.Config)
     if nil != err {
         return nil, errors.New(fmt.Sprintf("无法打开配置文件: %v", err))
     }
@@ -100,20 +99,20 @@ func (u *userCmd) load() (*config.UserConfig, error) {
 }
 
 // exec 执行操作
-func (u *userCmd) exec() error {
+func (c *Cmd) exec() error {
     update := false
 
     switch {
-    case u.cmdInputConfig.List:
-        for key, value := range u.fileConfig.Users {
+    case c.Config.List:
+        for key, value := range c.userConfig.Users {
             fmt.Printf("%v : %v : %d\n", key, value.Expired, value.MaxRate)
         }
-    case u.cmdInputConfig.Add:
-        if _, ok := u.fileConfig.Users[u.cmdInputConfig.Username]; ok {
+    case c.Config.Add:
+        if _, ok := c.userConfig.Users[c.Config.Username]; ok {
             return errors.New("用户名称已存在，无法重复添加")
         }
 
-        password, err := u.password(u.cmdInputConfig.Password)
+        password, err := c.password(c.Config.Password)
         if nil != err {
             return err
         }
@@ -122,28 +121,28 @@ func (u *userCmd) exec() error {
         maxRate := 0
         maxConnection := 0
 
-        if "" != u.cmdInputConfig.Expired {
-            expired = u.cmdInputConfig.Expired
+        if "" != c.Config.Expired {
+            expired = c.Config.Expired
         }
-        if 0 < u.cmdInputConfig.MaxRate {
-            maxRate = u.cmdInputConfig.MaxRate
+        if 0 < c.Config.MaxRate {
+            maxRate = c.Config.MaxRate
         }
-        if 0 < u.cmdInputConfig.MaxConnection {
-            maxConnection = u.cmdInputConfig.MaxConnection
+        if 0 < c.Config.MaxConnection {
+            maxConnection = c.Config.MaxConnection
         }
 
         userInfo := &config.UserInfo{Password: password, Expired: expired, MaxRate: maxRate, MaxConnection: maxConnection}
-        u.fileConfig.Users[u.cmdInputConfig.Username] = userInfo
+        c.userConfig.Users[c.Config.Username] = userInfo
 
         update = true
-    case u.cmdInputConfig.Upd:
-        userInfo, ok := u.fileConfig.Users[u.cmdInputConfig.Username]
+    case c.Config.Upd:
+        userInfo, ok := c.userConfig.Users[c.Config.Username]
         if !ok {
             return errors.New("无法找到用户")
         }
 
-        if "" != u.cmdInputConfig.Password {
-            password, err := u.password(u.cmdInputConfig.Password)
+        if "" != c.Config.Password {
+            password, err := c.password(c.Config.Password)
             if nil != err {
                 return errors.New("加密密码失败")
             }
@@ -151,37 +150,37 @@ func (u *userCmd) exec() error {
             userInfo.Password = password
         }
 
-        if "" != u.cmdInputConfig.Expired {
-            userInfo.Expired = u.cmdInputConfig.Expired
+        if "" != c.Config.Expired {
+            userInfo.Expired = c.Config.Expired
         }
 
-        if 0 <= u.cmdInputConfig.MaxRate {
-            userInfo.MaxRate = u.cmdInputConfig.MaxRate
+        if 0 <= c.Config.MaxRate {
+            userInfo.MaxRate = c.Config.MaxRate
         }
 
-        if 0 <= u.cmdInputConfig.MaxConnection {
-            userInfo.MaxConnection = u.cmdInputConfig.MaxConnection
+        if 0 <= c.Config.MaxConnection {
+            userInfo.MaxConnection = c.Config.MaxConnection
         }
 
         update = true
-    case u.cmdInputConfig.Del:
-        _, ok := u.fileConfig.Users[u.cmdInputConfig.Username]
+    case c.Config.Del:
+        _, ok := c.userConfig.Users[c.Config.Username]
         if ok {
-            delete(u.fileConfig.Users, u.cmdInputConfig.Username)
+            delete(c.userConfig.Users, c.Config.Username)
 
             update = true
         }
     }
 
     if update {
-        return u.save()
+        return c.save()
     }
 
     return nil
 }
 
 // password 加密密码
-func (u *userCmd) password(password string) (string, error) {
+func (c *Cmd) password(password string) (string, error) {
     password = utils.EncryptPassword(password)
 
     data, err := bcrypt.GenerateFromPassword([]byte(password), 4)
@@ -193,23 +192,23 @@ func (u *userCmd) password(password string) (string, error) {
 }
 
 // save 保存到文件
-func (u *userCmd) save() error {
-    userConfig, err := u.load()
+func (c *Cmd) save() error {
+    userConfig, err := c.load()
     if nil != err {
         return err
     }
 
-    if u.fileConfig.Ver != userConfig.Ver {
+    if c.userConfig.Ver != userConfig.Ver {
         return errors.New("文件已被更改，本次更新无法提交，请重新尝试")
     }
-    u.fileConfig.Ver += 1
+    c.userConfig.Ver += 1
 
-    data, err := json.Marshal(u.fileConfig)
+    data, err := json.Marshal(c.userConfig)
     if nil != err {
         return errors.New(fmt.Sprintf("序列化数据失败: %v", err))
     }
 
-    file, err := os.OpenFile(u.cmdInputConfig.Config, os.O_RDWR|os.O_TRUNC, 0644)
+    file, err := os.OpenFile(c.Config.Config, os.O_RDWR|os.O_TRUNC, 0644)
     if nil != err {
         return errors.New(fmt.Sprintf("无法打开配置文件: %v", err))
     }

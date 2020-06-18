@@ -86,12 +86,21 @@ func (s *Socket) isSocks5(conn net.Conn) bool {
 
 // authorize 身份验证
 func (s *Socket) authorize(conn net.Conn) bool {
+    // 接收支持的验证方法
+    length := make([]byte, 1)
+    n, err := conn.Read(length)
+    if n != 1 || nil != err {
+        return false
+    }
+
+    methods := make([]byte, length[0])
+    n, err = conn.Read(methods)
+    if n != int(length[0]) || nil != err {
+        return false
+    }
+
     // 身份验证应答：不需要验证
     _, _ = conn.Write([]byte{0x05, 0x00})
-
-    // 这里curl客户端好像会给一个[2 0 1]的应答数据流，先忽略掉
-    buffer := make([]byte, 3)
-    _, _ = conn.Read(buffer)
 
     return true
 }
