@@ -40,6 +40,7 @@ func (c *Cmd) generateServiceConfig() error {
     if nil != err {
         return err
     }
+    defer file.Close()
 
     content := strings.Replace(template, "EXEC_CMD", c.Config.ExecCmd, 1)
     content = strings.Replace(content, "YOUR_HOST", c.Config.Hostname, 1)
