@@ -13,7 +13,6 @@ import (
     "os"
     "os/exec"
     "path"
-    "runtime"
     "strings"
 )
 
@@ -164,7 +163,7 @@ func (c *Cmd) checkAndInstallNginx() error {
     }
 
     if "y" == strings.Trim(input, "\n") {
-        system, err := c.getOsType()
+        system, err := utils.GetOsType()
         if nil != err {
             return err
         }
@@ -201,7 +200,7 @@ func (c *Cmd) generateNginxConfig(hostname string) error {
 
     hostConfig := strings.Replace(template, "{host}", hostname, 1)
 
-    system, err := c.getOsType()
+    system, err := utils.GetOsType()
     if nil != err {
         return err
     }
@@ -234,38 +233,6 @@ func (c *Cmd) generateNginxConfig(hostname string) error {
     }
 
     return nil
-}
-
-// getOsType 获取文件系统类型
-func (c *Cmd) getOsType() (string, error) {
-    switch runtime.GOOS {
-    case "darwin":
-        return runtime.GOOS, nil
-    case "linux":
-        // ubuntu视为debian
-        if debian, err := utils.FileExists("/etc/debian_version"); nil != err || debian {
-            if debian {
-                return "debian", nil
-            }
-
-            return "", err
-        }
-
-        // centos/fedora视为redhat
-        if redhat, err := utils.FileExists("/etc/redhat-version"); nil != err || redhat {
-            if redhat {
-                return "redhat", nil
-            }
-
-            return "", err
-        }
-
-        return "unknown", nil
-    case "windows":
-        return runtime.GOOS, nil
-    default:
-        return "unknown", nil
-    }
 }
 
 // download 下载文件
