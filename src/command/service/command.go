@@ -42,8 +42,17 @@ func (c *Cmd) generateServiceConfig() error {
     }
     defer file.Close()
 
+    var template string
+    if c.Config.Client {
+        template = clientTemplate
+    } else {
+        template = serverTemplate
+    }
+
     content := strings.Replace(template, "EXEC_CMD", c.Config.ExecCmd, 1)
     content = strings.Replace(content, "YOUR_HOST", c.Config.Hostname, 1)
+    content = strings.Replace(content, "USERNAME", c.Config.Username, 1)
+    content = strings.Replace(content, "PASSWORD", c.Config.Password, 1)
 
     n, err := file.Write([]byte(content))
     if nil != err {

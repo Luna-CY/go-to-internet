@@ -9,11 +9,14 @@ import (
 type Config struct {
     Cmd *flag.FlagSet
 
-    Install bool // 安装到系统服务
-    Start   bool // 启动服务
-    Stop    bool // 关闭服务
-    Enable  bool // 设置开机自启动
-    Disable bool // 取消开机自启动
+    Install  bool   // 安装到系统服务
+    Start    bool   // 启动服务
+    Stop     bool   // 关闭服务
+    Enable   bool   // 设置开机自启动
+    Disable  bool   // 取消开机自启动
+    Client   bool   // 安装客户端服务
+    Username string // 客户端服务的用户名称
+    Password string // 客户端服务的用户密码
 
     Hostname string // 域名
     ExecCmd  string // ser-go-to-net可执行文件位置
@@ -39,6 +42,10 @@ func (c *Config) Validate() bool {
     }
 
     if c.Install && ("" == c.Hostname || "" == c.ExecCmd) {
+        return false
+    }
+
+    if c.Client && ("" == c.Username || "" == c.Password) {
         return false
     }
 

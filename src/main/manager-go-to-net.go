@@ -117,14 +117,17 @@ func serviceSubCommand() {
     config.Cmd = serviceCmd
     serviceCmd.Usage = config.Usage
 
-    serviceCmd.BoolVar(&config.Install, "install", false, "安装服务到系统")
+    serviceCmd.BoolVar(&config.Install, "install", false, "安装服务到系统，未指定-client参数时为服务器端服务")
+    serviceCmd.BoolVar(&config.Client, "client", false, "安装客户端服务到系统")
     serviceCmd.BoolVar(&config.Start, "start", false, "启动服务")
     serviceCmd.BoolVar(&config.Stop, "stop", false, "关闭服务")
     serviceCmd.BoolVar(&config.Enable, "enable", false, "添加到开机启动")
     serviceCmd.BoolVar(&config.Disable, "disable", false, "取消开机启动")
 
     serviceCmd.StringVar(&config.Hostname, "hostname", "", "域名，指定-install项时必须指定此项")
-    serviceCmd.StringVar(&config.ExecCmd, "exec", "", "ser-go-to-net命令位置，指定-install项时必须指定此项")
+    serviceCmd.StringVar(&config.ExecCmd, "exec", "", "ser-go-to-net或cli-go-to-net命令位置，指定-install项时必须指定此项")
+    serviceCmd.StringVar(&config.Username, "username", "", "cli-go-to-net的-u参数，指定-client项时必须指定此项")
+    serviceCmd.StringVar(&config.Password, "password", "", "cli-go-to-net的-p参数，指定-client项时必须指定此项")
 
     if err := parse(serviceCmd, config); nil != err {
         serviceCmd.Usage()
