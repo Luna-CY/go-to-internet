@@ -120,11 +120,15 @@ func serviceSubCommand() {
     serviceCmd.BoolVar(&config.Install, "install", false, "安装服务到系统")
     serviceCmd.BoolVar(&config.Start, "start", false, "启动服务")
     serviceCmd.BoolVar(&config.Stop, "stop", false, "关闭服务")
+    serviceCmd.BoolVar(&config.Restart, "restart", false, "重启服务")
     serviceCmd.BoolVar(&config.Enable, "enable", false, "添加到开机启动")
     serviceCmd.BoolVar(&config.Disable, "disable", false, "取消开机启动")
+    serviceCmd.BoolVar(&config.SetAutoRestart, "set-auto-restart", false, "自动重启服务")
+    serviceCmd.BoolVar(&config.SetAutoRestart, "remove", false, "从系统移除服务")
 
     serviceCmd.StringVar(&config.Hostname, "hostname", "", "域名，指定-install项时必须指定此项")
     serviceCmd.StringVar(&config.ExecCmd, "exec", "", "ser-go-to-net命令位置，指定-install项时必须指定此项")
+    serviceCmd.StringVar(&config.Cron, "cron", "", "指定-install或-auto-restart项时可以通过此项修改自动重启的计划任务周期，默认为0 6 1 * *，设置为-可以取消计划任务")
 
     if err := parse(serviceCmd, config); nil != err {
         serviceCmd.Usage()
