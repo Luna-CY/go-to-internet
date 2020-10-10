@@ -10,7 +10,7 @@ import (
 )
 
 type Cmd struct {
-    Config *Config
+    Config Config
 }
 
 func (c *Cmd) Exec() error {

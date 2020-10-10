@@ -14,3 +14,8 @@ package tunnel
 //
 // VER CMD CODE DATA_L DATA
 //  1   1   1     2     N
+//
+// 新建连接的DATA部分协议
+//
+// IP_TYPE PORT IP
+//    1     2   N

@@ -7,23 +7,23 @@ import (
 )
 
 // NewConnectMessage 建立一个新的连接消息
-func NewConnectMessage(conn net.Conn, ipType byte, dstIp string, dstPort int) *MessageProtocol {
-    return &MessageProtocol{Conn: conn, Cmd: CmdNewConnect, Code: MessageCodeNotSet, IpType: ipType, DstIp: dstIp, DstPort: dstPort}
+func NewConnectMessage(conn net.Conn, ipType byte, dstIp string, dstPort int) MessageProtocol {
+    return MessageProtocol{Conn: conn, Cmd: CmdNewConnect, Code: MessageCodeNotSet, IpType: ipType, DstIp: dstIp, DstPort: dstPort}
 }
 
 // NewDataMessage 建立一个新的数据消息
-func NewDataMessage(conn net.Conn, data []byte) *MessageProtocol {
-    return &MessageProtocol{Conn: conn, Cmd: CmdData, Code: MessageCodeNotSet, Data: data}
+func NewDataMessage(conn net.Conn, data []byte) MessageProtocol {
+    return MessageProtocol{Conn: conn, Cmd: CmdData, Code: MessageCodeNotSet, Data: data}
 }
 
 // NewOverMessage 建立一个结束消息
-func NewOverMessage(conn net.Conn) *MessageProtocol {
-    return &MessageProtocol{Conn: conn, Cmd: CmdOver, Code: MessageCodeNotSet}
+func NewOverMessage(conn net.Conn) MessageProtocol {
+    return MessageProtocol{Conn: conn, Cmd: CmdOver, Code: MessageCodeNotSet}
 }
 
 // NewEmptyMessage 建立一个空消息
-func NewEmptyMessage(conn net.Conn) *MessageProtocol {
-    return &MessageProtocol{Conn: conn, Code: MessageCodeNotSet}
+func NewEmptyMessage(conn net.Conn) MessageProtocol {
+    return MessageProtocol{Conn: conn, Code: MessageCodeNotSet}
 }
 
 // MessageProtocol 消息协议

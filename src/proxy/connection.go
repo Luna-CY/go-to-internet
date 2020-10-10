@@ -92,7 +92,8 @@ func (c *Connection) Accept() {
                 logger.Errorf("解析目标数据失败: %v", err)
             }
 
-            if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
+            overMessage := tunnel.NewOverMessage(c.Tunnel)
+            if err := overMessage.Send(); nil != err && c.Verbose {
                 logger.Errorf("发送结束消息失败: %v", err)
             }
 
@@ -105,7 +106,8 @@ func (c *Connection) Accept() {
                 logger.Errorf("建立目标连接失败: %v", err)
             }
 
-            if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
+            overMessage := tunnel.NewOverMessage(c.Tunnel)
+            if err := overMessage.Send(); nil != err && c.Verbose {
                 logger.Errorf("发送结束消息失败: %v", err)
             }
 
@@ -164,7 +166,8 @@ func (c *Connection) bind(dst net.Conn) error {
                 return err
             }
 
-            if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err {
+            message := tunnel.NewOverMessage(c.Tunnel)
+            if err := message.Send(); nil != err {
                 if c.Verbose {
                     logger.Errorf("发送结束消息失败: %v", err)
                 }

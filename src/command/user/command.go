@@ -14,9 +14,9 @@ import (
 
 // UserCmd 用户子命令结构
 type Cmd struct {
-    Config *Config
+    Config Config
 
-    userConfig *config.UserConfig
+    userConfig config.UserConfig
 }
 
 func (c *Cmd) Exec() error {
@@ -78,21 +78,21 @@ func (c *Cmd) init() error {
 }
 
 // load 加载配置文件
-func (c *Cmd) load() (*config.UserConfig, error) {
+func (c *Cmd) load() (config.UserConfig, error) {
     file, err := os.Open(c.Config.Config)
     if nil != err {
-        return nil, errors.New(fmt.Sprintf("无法打开配置文件: %v", err))
+        return config.UserConfig{}, errors.New(fmt.Sprintf("无法打开配置文件: %v", err))
     }
     defer file.Close()
 
     data, err := ioutil.ReadAll(file)
     if nil != err {
-        return nil, errors.New(fmt.Sprintf("无法读取配置文件: %v", err))
+        return config.UserConfig{}, errors.New(fmt.Sprintf("无法读取配置文件: %v", err))
     }
 
-    userConfig := &config.UserConfig{}
-    if err := json.Unmarshal(data, userConfig); nil != err {
-        return nil, errors.New(fmt.Sprintf("解析配置文件失败: %v", err))
+    userConfig := config.UserConfig{}
+    if err := json.Unmarshal(data, &userConfig); nil != err {
+        return userConfig, errors.New(fmt.Sprintf("解析配置文件失败: %v", err))
     }
 
     return userConfig, nil

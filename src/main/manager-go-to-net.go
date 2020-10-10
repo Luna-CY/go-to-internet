@@ -55,7 +55,7 @@ func parse(cmd *flag.FlagSet, config command.Config) error {
 
 // userSubCommand 用户子命令
 func userSubCommand() {
-    config := &user.Config{}
+    config := user.Config{}
     userCmd := flag.NewFlagSet("user", flag.ExitOnError)
     config.Cmd = userCmd
     userCmd.Usage = config.Usage
@@ -72,7 +72,7 @@ func userSubCommand() {
     userCmd.IntVar(&config.MaxRate, "max-rate", -1, "用户最大传输速率，-1表示未设置该参数；0表示不限速，非0表示最大传输速率，单位为KB")
     userCmd.IntVar(&config.MaxConnection, "max-connection", -1, "用户最大连接数，-1表示未设置该参数；0表示不限制连接数，非0表示最大连接数")
 
-    if err := parse(userCmd, config); nil != err {
+    if err := parse(userCmd, &config); nil != err {
         userCmd.Usage()
 
         return
@@ -86,7 +86,7 @@ func userSubCommand() {
 
 // acmeSubCommand acme子命令
 func acmeSubCommand() {
-    config := &acme.Config{}
+    config := acme.Config{}
     acmeCmd := flag.NewFlagSet("acme", flag.ExitOnError)
     config.Cmd = acmeCmd
     acmeCmd.Usage = config.Usage
@@ -98,7 +98,7 @@ func acmeSubCommand() {
 
     acmeCmd.StringVar(&config.Hostname, "hostname", "", "操作的域名")
 
-    if err := parse(acmeCmd, config); nil != err {
+    if err := parse(acmeCmd, &config); nil != err {
         acmeCmd.Usage()
 
         return
@@ -112,7 +112,7 @@ func acmeSubCommand() {
 
 // serviceSubCommand 服务子命令
 func serviceSubCommand() {
-    config := &service.Config{}
+    config := service.Config{}
     serviceCmd := flag.NewFlagSet("service", flag.ExitOnError)
     config.Cmd = serviceCmd
     serviceCmd.Usage = config.Usage
@@ -130,7 +130,7 @@ func serviceSubCommand() {
     serviceCmd.StringVar(&config.ExecCmd, "exec", "", "ser-go-to-net命令位置，指定-install项时必须指定此项")
     serviceCmd.StringVar(&config.Cron, "cron", "", "指定-install或-auto-restart项时可以通过此项修改自动重启的计划任务周期，默认为0 6 1 * *，设置为-可以取消计划任务")
 
-    if err := parse(serviceCmd, config); nil != err {
+    if err := parse(serviceCmd, &config); nil != err {
         serviceCmd.Usage()
 
         return
