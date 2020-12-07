@@ -24,128 +24,172 @@ type Cmd struct {
 func (c *Cmd) Exec() error {
     switch {
     case c.Config.Install:
-        home, err := os.UserHomeDir()
-        if nil != err {
-            logger.Error("无法获取用户主目录")
-
-            break
-        }
-        acmePath := path.Join(home, ".acme.sh")
-
-        info, err := os.Stat(acmePath)
-        if nil == err {
-            if !info.IsDir() {
-                logger.Errorf("[%v]路径已存在并且不是一个目录", acmePath)
-
-                break
-            }
-
-            logger.Infof("已安装acme.sh工具，重新安装请删除[%v]目录后重新执行", acmePath)
-
-            break
-        }
-
-        if !os.IsNotExist(err) {
-            logger.Errorf("获取路径信息失败: %v", err)
-
-            break
-        }
-
-        output := path.Join(os.TempDir(), "install-acme.sh")
-
-        if err := c.download(common.AcmePath, output); nil != err {
-            logger.Errorf("下载安装脚本失败: %v", err)
-
-            break
-        }
-
-        if err := os.Chmod(output, os.FileMode(0755)); nil != err {
-            logger.Errorf("修改文件权限失败: %v", err)
-
-            break
-        }
-
-        if err := utils.ExecCommandOutputToLog("sh", []string{"-c", output}, &[]string{"INSTALLONLINE=1"}); nil != err {
-            logger.Errorf("安装acme.sh失败: %v", err)
-
-            break
-        }
-
-        if err := unix.Unlink(output); nil != err {
-            logger.Errorf("删除安装脚本失败: %v", err)
-
-            break
-        }
-
-        logger.Info("安装完成")
+        c.install()
     case c.Config.Issue:
-        home, err := os.UserHomeDir()
-        if nil != err {
-            logger.Error("无法获取用户主目录")
-
-            break
-        }
-
-        command := path.Join(home, ".acme.sh", "acme.sh")
-        info, err := os.Stat(command)
-        if nil != err {
-            logger.Errorf("没有找到acme.sh工具: %v", err)
-
-            break
-        }
-
-        if info.IsDir() {
-            logger.Error("无效的acme.sh工具路径")
-
-            break
-        }
-
-        switch {
-        case c.Config.Nginx:
-            if err := c.checkAndInstallNginx(); nil != err {
-                logger.Error(err)
-
-                break
-            }
-
-            if err := c.generateNginxConfig(c.Config.Hostname); nil != err {
-                logger.Errorf("创建nginx配置失败: %v", err)
-
-                break
-            }
-
-            isExist, err := utils.FileExists(fmt.Sprintf("/root/.acme.sh/%v", c.Config.Hostname))
-            if nil != err {
-                logger.Errorf("检查证书路径失败: %v", err)
-
-                break
-            }
-
-            if isExist {
-                logger.Info("该域名已存在证书")
-
-                break
-            }
-
-            if err := utils.ExecCommandOutputToLog(command, []string{"--issue", "-d", c.Config.Hostname, "--nginx"}, nil); nil != err {
-                logger.Errorf("申请证书失败: %v", err)
-
-                break
-            }
-
-            logger.Info("申请证书完成")
-        default:
-            if err := utils.ExecCommandOutputToLog(command, []string{"--issue", "-d", c.Config.Hostname, "--standalone"}, nil); nil != err {
-                logger.Errorf("申请证书失败: %v", err)
-
-                break
-            }
-
-            logger.Info("申请证书完成")
-        }
+        c.issue()
+    case c.Config.Renew:
+        c.renew()
     }
 
     return nil
+}
+
+// install 安装服务Acme.sh
+func (c *Cmd) install() {
+    home, err := os.UserHomeDir()
+    if nil != err {
+        logger.Error("无法获取用户主目录")
+
+        return
+    }
+    acmePath := path.Join(home, ".acme.sh")
+
+    info, err := os.Stat(acmePath)
+    if nil == err {
+        if !info.IsDir() {
+            logger.Errorf("[%v]路径已存在并且不是一个目录", acmePath)
+
+            return
+        }
+
+        logger.Infof("已安装acme.sh工具，重新安装请删除[%v]目录后重新执行", acmePath)
+
+        return
+    }
+
+    if !os.IsNotExist(err) {
+        logger.Errorf("获取路径信息失败: %v", err)
+
+        return
+    }
+
+    output := path.Join(os.TempDir(), "install-acme.sh")
+
+    if err := c.download(common.AcmePath, output); nil != err {
+        logger.Errorf("下载安装脚本失败: %v", err)
+
+        return
+    }
+
+    if err := os.Chmod(output, os.FileMode(0755)); nil != err {
+        logger.Errorf("修改文件权限失败: %v", err)
+
+        return
+    }
+
+    if err := utils.ExecCommandOutputToLog("sh", []string{"-c", output}, &[]string{"INSTALLONLINE=1"}); nil != err {
+        logger.Errorf("安装acme.sh失败: %v", err)
+
+        return
+    }
+
+    if err := unix.Unlink(output); nil != err {
+        logger.Errorf("删除安装脚本失败: %v", err)
+
+        return
+    }
+
+    logger.Info("安装完成")
+}
+
+// issue 申请证书
+func (c *Cmd) issue() {
+    home, err := os.UserHomeDir()
+    if nil != err {
+        logger.Error("无法获取用户主目录")
+
+        return
+    }
+
+    command := path.Join(home, ".acme.sh", "acme.sh")
+    info, err := os.Stat(command)
+    if nil != err {
+        logger.Errorf("没有找到acme.sh工具: %v", err)
+
+        return
+    }
+
+    if info.IsDir() {
+        logger.Error("无效的acme.sh工具路径")
+
+        return
+    }
+
+    switch {
+    case c.Config.Nginx:
+        if err := c.checkAndInstallNginx(); nil != err {
+            logger.Error(err)
+
+            break
+        }
+
+        if err := c.generateNginxConfig(c.Config.Hostname); nil != err {
+            logger.Errorf("创建nginx配置失败: %v", err)
+
+            break
+        }
+
+        isExist, err := utils.FileExists(fmt.Sprintf("/root/.acme.sh/%v", c.Config.Hostname))
+        if nil != err {
+            logger.Errorf("检查证书路径失败: %v", err)
+
+            break
+        }
+
+        if isExist {
+            logger.Info("该域名已存在证书")
+
+            break
+        }
+
+        if err := utils.ExecCommandOutputToLog(command, []string{"--issue", "-d", c.Config.Hostname, "--nginx"}, nil); nil != err {
+            logger.Errorf("申请证书失败: %v", err)
+
+            break
+        }
+
+        logger.Info("申请证书完成")
+    default:
+        if err := utils.ExecCommandOutputToLog(command, []string{"--issue", "-d", c.Config.Hostname, "--standalone"}, nil); nil != err {
+            logger.Errorf("申请证书失败: %v", err)
+
+            break
+        }
+
+        logger.Info("申请证书完成")
+    }
+}
+
+// renew 续签证书
+func (c *Cmd) renew() {
+    home, err := os.UserHomeDir()
+    if nil != err {
+        logger.Error("无法获取用户主目录")
+
+        return
+    }
+
+    command := path.Join(home, ".acme.sh", "acme.sh")
+    info, err := os.Stat(command)
+    if nil != err {
+        logger.Errorf("没有找到acme.sh工具: %v", err)
+
+        return
+    }
+
+    if info.IsDir() {
+        logger.Error("无效的acme.sh工具路径")
+
+        return
+    }
+
+    if err := utils.ExecCommandOutputToLog(command, []string{"--renew", "-d", c.Config.Hostname}, nil); nil != err {
+        logger.Errorf("申请证书失败: %v", err)
+
+        return
+    }
+
+    logger.Info("续签证书完成")
 }
 
 // checkAndInstallNginx 检查nginx是否存在，不存在时安装nginx
