@@ -55,9 +55,9 @@ func CopyLimiterWithCtxToMessageProtocol(ctx context.Context, reader net.Conn, w
 }
 
 // CopyFromMessageProtocol 基于context的Copy
-func CopyFromMessageProtocol(reader net.Conn, writer net.Conn) (chan error, chan *MessageProtocol) {
+func CopyFromMessageProtocol(reader net.Conn, writer net.Conn) (chan error, chan MessageProtocol) {
     ch := make(chan error)
-    chm := make(chan *MessageProtocol)
+    chm := make(chan MessageProtocol)
 
     go func() {
         for {

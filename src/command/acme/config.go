@@ -12,6 +12,7 @@ type Config struct {
     Install bool // 安装acme.sh
 
     Issue      bool // 申请证书
+    Renew      bool // 续签证书
     Standalone bool // 模拟一个http服务器
     Nginx      bool // 通过nginx验证
 
@@ -37,7 +38,7 @@ func (c *Config) Validate() bool {
     switch {
     case c.Install:
         return true
-    case c.Issue:
+    case c.Issue, c.Renew:
         if "" == c.Hostname {
             return false
         }

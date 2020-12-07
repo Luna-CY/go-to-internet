@@ -153,7 +153,8 @@ func (c *Connection) bindToMessage(reader net.Conn, writer net.Conn) chan error 
 
 // sendOverMessage 发送结束消息
 func (c *Connection) sendOverMessage() {
-    if err := tunnel.NewOverMessage(c.Tunnel).Send(); nil != err && c.Verbose {
+    message := tunnel.NewOverMessage(c.Tunnel)
+    if err := message.Send(); nil != err && c.Verbose {
         logger.Errorf("发送结束消息失败: %v", err)
     }
 }

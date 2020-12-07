@@ -11,6 +11,11 @@
 - 支持多用户：在单域名以及端口下支持创建多用户
 - 用户管理：每个用户支持对过期时间、传输速度、连接数量进行限制
 
+仓库地址：
+
+- Gitee: [https://gitee.com/Luna-CY/go-to-internet](https://gitee.com/Luna-CY/go-to-internet)
+- Github: [https://github.com/Luna-CY/go-to-internet](https://github.com/Luna-CY/go-to-internet)
+
 #### Wiki
 
 使用教程见[这里](https://blog.luna.xin/article/29.html)，或者查看[wiki](https://github.com/Luna-CY/go-to-internet/wiki)

@@ -36,7 +36,7 @@ func serverCommandUsage() {
 }
 
 func main() {
-    serverConfig := &proxy.Config{}
+    serverConfig := proxy.Config{}
 
     flag.StringVar(&serverConfig.Hostname, "H", "", "域名，该域名应该与证书的域名一致")
     flag.IntVar(&serverConfig.Port, "p", 443, "监听端口号")
@@ -121,7 +121,7 @@ func switchToGroup(group string) error {
 }
 
 // tlsListen 启动tls服务器
-func tlsListen(config *proxy.Config) {
+func tlsListen(config proxy.Config) {
     userConfig, err := loadUserConfig(config.UserConfig)
     if nil != err {
         logger.Error(err)
@@ -163,7 +163,7 @@ func tlsListen(config *proxy.Config) {
 }
 
 // getTlsConfig 获取TSL配置结构
-func getTlsConfig(config *proxy.Config) (*tls.Config, error) {
+func getTlsConfig(config proxy.Config) (*tls.Config, error) {
     cert, key := config.SSLCerFile, config.SSLKeyFile
 
     if "" == cert || "" == key {
