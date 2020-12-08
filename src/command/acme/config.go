@@ -25,8 +25,8 @@ func (c *Config) Usage() {
     _, _ = fmt.Fprintln(c.Cmd.Output(), "")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "usage:")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net acme -install")
-    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net acme -issue -hostname YOUR_HOST")
-    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net acme -renew -hostname YOUR_HOST")
+    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net acme -issue -hostname YOUR_HOST [-nginx]")
+    _, _ = fmt.Fprintln(c.Cmd.Output(), "    manager-go-to-net acme -renew -hostname YOUR_HOST [-nginx]")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "")
     _, _ = fmt.Fprintln(c.Cmd.Output(), "")
 

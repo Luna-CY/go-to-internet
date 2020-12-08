@@ -93,8 +93,9 @@ func acmeSubCommand() {
 
     acmeCmd.BoolVar(&config.Install, "install", false, "安装acme工具")
     acmeCmd.BoolVar(&config.Issue, "issue", false, "申请证书")
+    acmeCmd.BoolVar(&config.Renew, "renew", false, "续签证书")
     acmeCmd.BoolVar(&config.Nginx, "nginx", false, "通过nginx验证服务器")
-    acmeCmd.BoolVar(&config.Standalone, "standalone", false, "通过acme.sh的standalone模式验证服务器")
+    acmeCmd.BoolVar(&config.Standalone, "standalone", false, "通过acme.sh的standalone模式验证服务器，默认会使用此模式")
 
     acmeCmd.StringVar(&config.Hostname, "hostname", "", "操作的域名")
 
