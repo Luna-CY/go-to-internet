@@ -1,5 +1,16 @@
 # 更新日志
 
+## [v2.1.1] - 2020-12-08
+
+### 新增
+
+* manager-go-to-net工具的service命令新增-client参数，用于生成客户端的服务配置
+* manager-go-to-net工具的acme命令新增-renew参数，支持续签https证书
+
+### 优化
+
+* nginx配置模板新增对ipv6端口的支持
+
 ## [v2.0.1] - 2020-06-05
 
 ### 修复
