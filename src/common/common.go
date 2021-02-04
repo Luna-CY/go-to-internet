@@ -7,4 +7,4 @@ const Version = "2.1.0"
 const TimePattern = "2006-01-02T15:04:05"
 
 // Acme工具下载路径
-const AcmePath = "https://raw.githubusercontent.com/acmesh-official/acme.sh/master/acme.sh"
+const AcmePath = "https://get.acme.sh"

@@ -76,7 +76,7 @@ func (c *Cmd) install() {
         return
     }
 
-    if err := utils.ExecCommandOutputToLog("sh", []string{"-c", output}, &[]string{"INSTALLONLINE=1"}); nil != err {
+    if err := utils.ExecCommandOutputToLog("sh", []string{"-s", "email=my@example.com", output}, nil); nil != err {
         logger.Errorf("安装acme.sh失败: %v", err)
 
         return
